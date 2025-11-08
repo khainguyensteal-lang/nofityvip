@@ -1,3 +1,4 @@
+
 getgenv().webhookHigh = "https://discord.com/api/webhooks/1436766023280758896/SZubNXujYYMfPcbs5hvM0Q8oJzJ7K-4ZAqi8ahdi5paV4TDBn21Q-CFxB14fQUQbzfve" -- ≥10M
 getgenv().webhookLow  = "https://discord.com/api/webhooks/1436766256794435805/9WJJu9E0U7bAHVlBXwkSms45wVxf3xY__4Lz7cssKqM8ZGyJg2qOe6CfdZtKMDspL5fE" -- 1M–7M
 getgenv().HighMin = 10_000_000
