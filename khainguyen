@@ -1,0 +1,164 @@
+getgenv().webhookHigh = "https://discord.com/api/webhooks/1436766023280758896/SZubNXujYYMfPcbs5hvM0Q8oJzJ7K-4ZAqi8ahdi5paV4TDBn21Q-CFxB14fQUQbzfve" -- ≥10M
+getgenv().webhookLow  = "https://discord.com/api/webhooks/1436766256794435805/9WJJu9E0U7bAHVlBXwkSms45wVxf3xY__4Lz7cssKqM8ZGyJg2qOe6CfdZtKMDspL5fE" -- 1M–7M
+getgenv().HighMin = 10_000_000
+getgenv().LowMin  = 1_000_000
+getgenv().LowMax  = 9_000_000
+
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local lastColor = nil
+
+local function getRandomColor()
+    local color
+    repeat
+        local r = math.random(0, 255)
+        local g = math.random(0, 255)
+        local b = math.random(0, 255)
+        color = bit32.lshift(r, 16) + bit32.lshift(g, 8) + b
+    until color ~= lastColor
+    lastColor = color
+    return color
+end
+
+local function parseMoney(str)
+    if not str or str == "" then return 0 end
+    local num, suffix = str:match("([%d%.]+)%s*([KMBT]?)")
+    num = tonumber(num)
+    if not num then return 0 end
+    local mult = ({ K=1e3, M=1e6, B=1e9, T=1e12 })[suffix:upper()] or 1
+    return num * mult
+end
+
+local function getPlotOwner(plot)
+    local sign = plot:FindFirstChild("PlotSign")
+    if sign and sign:FindFirstChild("SurfaceGui") then
+        local frame = sign.SurfaceGui:FindFirstChild("Frame")
+        if frame and frame:FindFirstChild("TextLabel") then
+            return tostring(frame.TextLabel.Text)
+        end
+    end
+    return "Unknown Owner"
+end
+
+local function getObjectText(obj)
+    if not obj then return nil end
+    if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+        return obj.Text
+    elseif obj:IsA("StringValue") or obj:IsA("IntValue") or obj:IsA("NumberValue") then
+        return obj.Value
+    else
+        return obj.Name
+    end
+end
+
+local function scanPets(plot)
+    local pets = {}
+    local owner = getPlotOwner(plot)
+    for _, obj in ipairs(plot:GetDescendants()) do
+        local display, gen
+        for _, child in ipairs(obj:GetDescendants()) do
+            local n = child.Name:lower()
+            if n:match("displayname") or n:match("display") then
+                display = child
+            elseif n:match("generation") or n:match("gen") then
+                gen = child
+            end
+        end
+
+        if display and gen then
+            local nameText = getObjectText(display) or "???"
+            local genText = getObjectText(gen) or "$???/s"
+            local fullText = genText
+            local value = parseMoney(genText)
+
+            table.insert(pets, {
+                name = nameText,
+                gen = fullText,
+                value = value,
+                owner = owner
+            })
+        end
+    end
+    return pets
+end
+
+local function sendWebhook(pets, webhookURL, label)
+    if #pets == 0 or not webhookURL then return end
+
+    local owner = pets[1].owner or "Unknown Owner"
+    local lines = {}
+    for _, pet in ipairs(pets) do
+        table.insert(lines, string.format("• %s [**%s**]", pet.name, pet.gen))
+    end
+    local petBlock = table.concat(lines, "\n")
+
+    local joinLink = string.format(
+        "https://chillihub1.github.io/chillihub-joiner/?placeId=%d&gameInstanceId=%s",
+        game.PlaceId, game.JobId
+    )
+
+    local tpScript = string.format(
+        "game:GetService('TeleportService'):TeleportToPlaceInstance(%d, '%s', game.Players.LocalPlayer)",
+        game.PlaceId, game.JobId
+    )
+
+    local embed = {
+        username = "🛰️ 𝐃𝐞𝐧𝐊𝐚𝐢",
+        embeds = {{
+            title = "**" .. label .. " | 𝐃𝐞𝐧𝐊𝐚𝐢 𝐍𝐨𝐭𝐢𝐟𝐲**",
+            description = string.format(
+            "🔍 **𝐅𝐨𝐮𝐧𝐝 %d 𝐏𝐞𝐭𝐬!** | 👤 **𝐎𝐰𝐧𝐞𝐫:** %s\n\n%s\n\n👥 **𝐏𝐥𝐚𝐲𝐞𝐫𝐬**\n%d / %d\n🆔 **𝐉𝐨𝐛𝐈𝐃**\n%s\n🌐 **𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤**\n[𝐂𝐥𝐢𝐜𝐤 𝐭𝐨 𝐉𝐨𝐢𝐧](%s)\n📜 **𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭**\n```lua\n%s\n```",
+           #pets, owner, petBlock, #Players:GetPlayers(), Players.MaxPlayers, game.JobId, joinLink, tpScript
+    ),
+            color = getRandomColor(), 
+            footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
+            timestamp = DateTime.now():ToIsoDate()
+        }}
+    }
+
+    local json = HttpService:JSONEncode(embed)
+    local req = http_request or request or (syn and syn.request) or (http and http.request)
+    if not req then return end
+
+    pcall(function()
+        req({
+            Url = webhookURL,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = json
+        })
+    end)
+end
+
+local sent = {}
+task.spawn(function()
+    while true do
+        for _, plot in pairs(Workspace.Plots:GetChildren()) do
+            local allPets = scanPets(plot)
+            local high, low = {}, {}
+
+            for _, pet in ipairs(allPets) do
+                local id = pet.name .. "|" .. pet.gen .. "|" .. pet.owner
+                if not sent[id] then
+                    if pet.value >= getgenv().HighMin then
+                        table.insert(high, pet)
+                        sent[id] = true
+                    elseif pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax then
+                        table.insert(low, pet)
+                        sent[id] = true
+                    end
+                end
+            end
+
+            if #high > 0 then
+                sendWebhook(high, getgenv().webhookHigh, "𝟏𝟎-𝟏𝟎𝟎𝐦")
+            end
+            if #low > 0 then
+                sendWebhook(low, getgenv().webhookLow, "𝟏-𝟏𝟎𝐦")
+            end
+        end
+        task.wait(1)
+    end
+end)
