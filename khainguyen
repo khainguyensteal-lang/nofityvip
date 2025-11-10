@@ -1,5 +1,5 @@
 -- ⚙️ CONFIG
-getgenv().webhookHigh = "https://discord.com/api/webhooks/1436766023280758896/SZubNXujYYMfPcbs5hvM0Q8oJzJ7K-4ZAqi8ahdi5paV4TDBn21Q-CFxB14fQUQbzfve"
+getgenv().webhookHigh = "https://discord.com/api/webhooks/1437518872088543245/ezyORskNFkM7gKoSFe-5RFayzaYmXb2rvYdZRJj5XsmBO_p11KhhxlF8y7gtF9UpvSGt"
 getgenv().webhookLow  = "https://discord.com/api/webhooks/1437516287508091093/zYkUQ4kIG2Oa_O_f4fTq35EP8f0CRqavng3Cv4Ta5g0Lo48u0KLW3oWtzpPFuk-e_JBs"
 getgenv().HighMin = 10_000_000
 getgenv().LowMin  = 1_000_000
