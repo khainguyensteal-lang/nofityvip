@@ -1,6 +1,6 @@
 -- ⚙️ CONFIG
 getgenv().webhookHigh = "https://discord.com/api/webhooks/1436766023280758896/SZubNXujYYMfPcbs5hvM0Q8oJzJ7K-4ZAqi8ahdi5paV4TDBn21Q-CFxB14fQUQbzfve" -- ≥10M
-getgenv().webhookLow  = "https://discord.com/api/webhooks/1436766256794435805/9WJJu9E0U7bAHVlBXwkSms45wVxf3xY__4Lz7cssKqM8ZGyJg2qOe6CfdZtKMDspL5fE" -- 1M–7M
+getgenv().webhookLow  = "https://discord.com/api/webhooks/1437516287508091093/zYkUQ4kIG2Oa_O_f4fTq35EP8f0CRqavng3Cv4Ta5g0Lo48u0KLW3oWtzpPFuk-e_JBs"
 getgenv().HighMin = 10_000_000
 getgenv().LowMin  = 1_000_000
 getgenv().LowMax  = 10_000_000
@@ -136,7 +136,7 @@ end
 local sent = {}
 task.spawn(function()
     while true do
-        if #Players:GetPlayers() < 4 then
+        if #Players:GetPlayers() < 3 then
             task.wait(5) 
             continue
         end
