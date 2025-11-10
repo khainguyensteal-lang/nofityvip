@@ -1,9 +1,9 @@
-
+-- ⚙️ CONFIG
 getgenv().webhookHigh = "https://discord.com/api/webhooks/1436766023280758896/SZubNXujYYMfPcbs5hvM0Q8oJzJ7K-4ZAqi8ahdi5paV4TDBn21Q-CFxB14fQUQbzfve" -- ≥10M
 getgenv().webhookLow  = "https://discord.com/api/webhooks/1436766256794435805/9WJJu9E0U7bAHVlBXwkSms45wVxf3xY__4Lz7cssKqM8ZGyJg2qOe6CfdZtKMDspL5fE" -- 1M–7M
 getgenv().HighMin = 10_000_000
 getgenv().LowMin  = 1_000_000
-getgenv().LowMax  = 9_000_000
+getgenv().LowMax  = 10_000_000
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -107,16 +107,16 @@ local function sendWebhook(pets, webhookURL, label)
 
     local embed = {
         username = "🛰️ 𝐃𝐞𝐧𝐊𝐚𝐢",
-        embeds = {{
+        embeds = { {
             title = "**" .. label .. " | 𝐃𝐞𝐧𝐊𝐚𝐢 𝐍𝐨𝐭𝐢𝐟𝐲**",
             description = string.format(
-            "🔍 **𝐅𝐨𝐮𝐧𝐝 %d 𝐏𝐞𝐭𝐬!** | 👤 **𝐎𝐰𝐧𝐞𝐫:** %s\n\n%s\n\n👥 **𝐏𝐥𝐚𝐲𝐞𝐫𝐬**\n%d / %d\n🆔 **𝐉𝐨𝐛𝐈𝐃**\n%s\n🌐 **𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤**\n[𝐂𝐥𝐢𝐜𝐤 𝐭𝐨 𝐉𝐨𝐢𝐧](%s)\n📜 **𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭**\n```lua\n%s\n```",
-           #pets, owner, petBlock, #Players:GetPlayers(), Players.MaxPlayers, game.JobId, joinLink, tpScript
-    ),
-            color = getRandomColor(), 
+                "🔍 **𝐅𝐨𝐮𝐧𝐝 %d 𝐏𝐞𝐭𝐬!** | 👤 **𝐎𝐰𝐧𝐞𝐫:** %s\n\n%s\n\n👥 **𝐏𝐥𝐚𝐲𝐞𝐫𝐬**\n%d / %d\n🆔 **𝐉𝐨𝐛𝐈𝐃**\n%s\n🌐 **𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤**\n[𝐂𝐥𝐢𝐜𝐤 𝐭𝐨 𝐉𝐨𝐢𝐧](%s)\n📜 **𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭**\n```lua\n%s\n```",
+                #pets, owner, petBlock, #Players:GetPlayers(), Players.MaxPlayers, game.JobId, joinLink, tpScript
+            ),
+            color = getRandomColor(),
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
-        }}
+        } }
     }
 
     local json = HttpService:JSONEncode(embed)
@@ -136,6 +136,11 @@ end
 local sent = {}
 task.spawn(function()
     while true do
+        if #Players:GetPlayers() < 4 then
+            task.wait(5) 
+            continue
+        end
+
         for _, plot in pairs(Workspace.Plots:GetChildren()) do
             local allPets = scanPets(plot)
             local high, low = {}, {}
