@@ -136,7 +136,7 @@ end
 local sent = {}
 task.spawn(function()
     while true do
-        if #Players:GetPlayers() < 2 then
+        if #Players:GetPlayers() < 4 then
             task.wait(5) 
             continue
         end
