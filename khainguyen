@@ -5,19 +5,160 @@ getgenv().HighMin = 10_000_000
 getgenv().LowMin  = 1_000_000
 getgenv().LowMax  = 10_000_000
 
+-- Nếu muốn ép luôn quét bất kể detect: true = quét, false = tôn detect
+getgenv().ForceScan = nil        -- nil = không ép; true = ép quét; false = ép skip
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
-local lastColor = nil
+-- ---------------------------
+-- Helper: pretty log with timestamp
+-- ---------------------------
+local function ts() return "[" .. os.date("%H:%M:%S") .. "]" end
+local function debugPrint(...) print(ts(), ...) end
+local function debugWarn(...) warn(ts(), ...) end
 
+-- ---------------------------
+-- Heuristics: collect diagnostic info
+-- ---------------------------
+local function getDiagnostics()
+    local diag = {}
+    diag.jobId = tostring(game.JobId or "")
+    diag.privateOk, diag.privateId = pcall(function() return game.PrivateServerId end)
+    diag.vipOk, diag.vipId = pcall(function() return game.VIPServerId end)
+    diag.plrCount = #Players:GetPlayers()
+    diag.maxPlayers = Players.MaxPlayers
+    diag.playerNames = {}
+    for i,p in ipairs(Players:GetPlayers()) do table.insert(diag.playerNames, p.Name) end
+    diag.envClass = (typeof(game.PrivateServerId or "") == "string") and "string" or typeof(game.PrivateServerId)
+    return diag
+end
+
+-- ---------------------------
+-- Heuristics: helpers
+-- ---------------------------
+local function looksLikeUUID(s)
+    if not s or s == "" then return false end
+    -- basic UUID-ish pattern (hex + hyphens)
+    return s:match("^[%x]+%-%x+%-%x+%-%x+%-%x+$") ~= nil
+end
+
+local function looksLikeAllHex(s)
+    if not s or s == "" then return false end
+    return s:match("^[%x%-]+$") ~= nil
+end
+
+-- ---------------------------
+-- Detection: combine heuristics
+-- ---------------------------
+local function detectPrivate()
+    local diag = getDiagnostics()
+    debugPrint("DIAG jobId:", diag.jobId)
+    debugPrint("DIAG privateOk:", diag.privateOk, "privateId:", tostring(diag.privateId))
+    debugPrint("DIAG vipOk:", diag.vipOk, "vipId:", tostring(diag.vipId))
+    debugPrint("DIAG playerCount:", diag.plrCount, "maxPlayers:", diag.maxPlayers)
+    debugPrint("DIAG playerNames:", table.concat(diag.playerNames, ", "))
+    debugPrint("DIAG envClass for PrivateServerId:", diag.envClass)
+
+    -- direct checks (most reliable)
+    if diag.vipOk and diag.vipId and diag.vipId ~= "" then
+        return true, "VIPServerId non-empty"
+    end
+    if diag.privateOk and diag.privateId and diag.privateId ~= "" and diag.privateId ~= "00000000-0000-0000-0000-000000000000" then
+        return true, "PrivateServerId non-empty"
+    end
+
+    -- fallback heuristics
+    local heur_private = false
+    local reasons = {}
+
+    -- 1) if jobId empty -> ambiguous (could be teleport not finished) -> not classify as private
+    if diag.jobId == "" then
+        table.insert(reasons, "JobId empty (ambiguous)")
+    else
+        if looksLikeUUID(diag.jobId) then
+            table.insert(reasons, "JobId looks like UUID")
+            -- if JobId looks like UUID AND very low player count AND small MaxPlayers => likely private
+            if diag.plrCount <= 1 and diag.maxPlayers <= 6 then
+                heur_private = true
+                table.insert(reasons, "JobId UUID + plr<=1 + maxPlayers<=6")
+            else
+                -- If JobId UUID but enough players, probably public
+                table.insert(reasons, "JobId UUID but playerCount>1 => uncertain")
+            end
+        elseif looksLikeAllHex(diag.jobId) then
+            table.insert(reasons, "JobId all-hex pattern")
+        else
+            table.insert(reasons, "JobId not UUID-like")
+        end
+    end
+
+    -- 2) Very small MaxPlayers (1-2) strongly indicates private
+    if diag.maxPlayers <= 2 then
+        heur_private = true
+        table.insert(reasons, "MaxPlayers <= 2")
+    end
+
+    -- 3) If only one player and JobId looks private-ish -> lean private
+    if diag.plrCount == 1 and looksLikeUUID(diag.jobId) then
+        heur_private = true
+        table.insert(reasons, "Single player + JobId UUID")
+    end
+
+    -- Decide final
+    if heur_private then
+        return true, table.concat(reasons, "; ")
+    else
+        -- ambiguous vs public: if none heuristics flagged private, treat as public
+        return false, table.concat(reasons, "; ")
+    end
+end
+
+-- ---------------------------
+-- Decide action with ForceScan and ambiguity handling
+-- ---------------------------
+local isPrivate, reason = detectPrivate()
+debugPrint("Detection result:", isPrivate and "PRIVATE" or "PUBLIC", "reason:", reason)
+
+if getgenv().ForceScan == true then
+    debugPrint("ForceScan=true → Ignoring detection, WILL SCAN (FORCED).")
+    isPrivate = false
+elseif getgenv().ForceScan == false then
+    debugWarn("ForceScan=false → Forcing skip regardless of detection.")
+    isPrivate = true
+end
+
+-- If ambiguous (reason contains "ambiguous" or reason length small) -> mark UNVERIFIED but continue
+local ambiguous = false
+if (not isPrivate) and (reason:match("ambiguous") or reason == "" or reason:match("uncertain")) then
+    ambiguous = true
+    debugWarn("Ambiguous detection (continue but mark UNVERIFIED):", reason)
+end
+
+if isPrivate and not ambiguous then
+    debugWarn("Final decision: SKIP scanning (private). Reason:", reason)
+    return
+end
+
+if isPrivate and ambiguous then
+    -- private but ambiguous? (rare) -> skip
+    debugWarn("Final decision: SKIP scanning (private but ambiguous). Reason:", reason)
+    return
+end
+
+-- If here: scanning allowed (either public OR ambiguous-unverified allowed)
+debugPrint("Proceeding with scanning. UNVERIFIED flag:", ambiguous and "YES" or "NO")
+
+-- ---------------------------
+-- Utilities (color, parse money, text)
+-- ---------------------------
+local lastColor = nil
 local function getRandomColor()
     local color
     repeat
-        local r = math.random(0, 255)
-        local g = math.random(0, 255)
-        local b = math.random(0, 255)
-        color = bit32.lshift(r, 16) + bit32.lshift(g, 8) + b
+        local r, g, b = math.random(0,255), math.random(0,255), math.random(0,255)
+        color = bit32.lshift(r,16) + bit32.lshift(g,8) + b
     until color ~= lastColor
     lastColor = color
     return color
@@ -28,7 +169,7 @@ local function parseMoney(str)
     local num, suffix = str:match("([%d%.]+)%s*([KMBT]?)")
     num = tonumber(num)
     if not num then return 0 end
-    local mult = ({ K=1e3, M=1e6, B=1e9, T=1e12 })[suffix:upper()] or 1
+    local mult = ({ K=1e3, M=1e6, B=1e9, T=1e12 })[ (suffix and tostring(suffix):upper()) or "" ] or 1
     return num * mult
 end
 
@@ -71,12 +212,11 @@ local function scanPets(plot)
         if display and gen then
             local nameText = getObjectText(display) or "???"
             local genText = getObjectText(gen) or "$???/s"
-            local fullText = genText
             local value = parseMoney(genText)
 
             table.insert(pets, {
                 name = nameText,
-                gen = fullText,
+                gen = genText,
                 value = value,
                 owner = owner
             })
@@ -105,18 +245,21 @@ local function sendWebhook(pets, webhookURL, label)
         game.PlaceId, game.JobId
     )
 
+    local extraNote = ""
+    if ambiguous then extraNote = "\n\n⚠️ **UNVERIFIED**: server type ambiguous (heuristics uncertain). Results may be from a private/reserved server." end
     local embed = {
         username = "🛰️ 𝐃𝐞𝐧𝐊𝐚𝐢",
-        embeds = { {
-            title = "**" .. label .. " | 𝐃𝐞𝐧𝐊𝐚𝐢 𝐍𝐨𝐭𝐢𝐟𝐲**",
+        embeds = {{
+            title = "**" .. label .. " | 𝐃𝐞𝐧𝐊𝐚𝐢 𝐍𝐨𝐭𝐢𝐟𝐲**" .. (ambiguous and " (UNVERIFIED)" or ""),
             description = string.format(
-                "🔍 **𝐅𝐨𝐮𝐧𝐝 %d 𝐏𝐞𝐭𝐬!** | 👤 **𝐎𝐰𝐧𝐞𝐫:** %s\n\n%s\n\n👥 **𝐏𝐥𝐚𝐲𝐞𝐫𝐬**\n%d / %d\n🆔 **𝐉𝐨𝐛𝐈𝐃**\n%s\n🌐 **𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤**\n[𝐂𝐥𝐢𝐜𝐤 𝐭𝐨 𝐉𝐨𝐢𝐧](%s)\n📜 **𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭**\n```lua\n%s\n```",
-                #pets, owner, petBlock, #Players:GetPlayers(), Players.MaxPlayers, game.JobId, joinLink, tpScript
+                "🔍 **𝐅𝐨𝐮𝐧𝐝 %d 𝐏𝐞𝐭𝐬!** | 👤 **𝐎𝐰𝐧𝐞𝐫:** %s\n\n%s\n\n👥 **𝐏𝐥𝐚𝐲𝐞𝐫𝐬**\n%d / %d\n🆔 **𝐉𝐨𝐛𝐈𝐃**\n%s\n🌐 **𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤**\n[𝐂𝐥𝐢𝐜𝐤 𝐭𝐨 𝐉𝐨𝐢𝐧](%s)\n\n%s%s\n📜 **𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭**\n```lua\n%s\n```",
+                #pets, owner, petBlock, #Players:GetPlayers(), Players.MaxPlayers, game.JobId, joinLink,
+                (ambiguous and ("⚠️ **UNVERIFIED DETECTION REASON:** " .. reason .. "\n") or ""), extraNote, tpScript
             ),
             color = getRandomColor(),
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
-        } }
+        }}
     }
 
     local json = HttpService:JSONEncode(embed)
@@ -133,14 +276,12 @@ local function sendWebhook(pets, webhookURL, label)
     end)
 end
 
+-- ---------------------------
+-- Main scanning loop
+-- ---------------------------
 local sent = {}
 task.spawn(function()
     while true do
-        if #Players:GetPlayers() < 4 then
-            task.wait(5) 
-            continue
-        end
-
         for _, plot in pairs(Workspace.Plots:GetChildren()) do
             local allPets = scanPets(plot)
             local high, low = {}, {}
@@ -158,12 +299,8 @@ task.spawn(function()
                 end
             end
 
-            if #high > 0 then
-                sendWebhook(high, getgenv().webhookHigh, "𝟏𝟎-𝟏𝟎𝟎𝐦")
-            end
-            if #low > 0 then
-                sendWebhook(low, getgenv().webhookLow, "𝟏-𝟏𝟎𝐦")
-            end
+            if #high > 0 then sendWebhook(high, getgenv().webhookHigh, "𝟏𝟎-𝟏𝟎𝟎𝐦") end
+            if #low > 0 then sendWebhook(low, getgenv().webhookLow, "𝟏-𝟏𝟎𝐦") end
         end
         task.wait(1)
     end
