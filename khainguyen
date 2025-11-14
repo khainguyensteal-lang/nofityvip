@@ -4,7 +4,7 @@ getgenv().webhookHigh      = "https://discord.com/api/webhooks/14389309564791072
 getgenv().webhookLow       = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
 
 getgenv().HighlightMin = 10_000_000 -- pets ≥10M
-getgenv().HighMin      = 10_000_000 -- pets ≥10M (cùng giá trị, nhưng màu đỏ)
+getgenv().HighMin      = 10_000_000 -- pets ≥10M
 getgenv().LowMin       = 1_000_000
 getgenv().LowMax       = 10_000_000
 
@@ -12,22 +12,6 @@ local HttpService = game:GetService("HttpService")
 local Players     = game:GetService("Players")
 local Workspace   = game:GetService("Workspace")
 
-local lastColor = nil
-
--- Random color for embed
-local function getRandomColor()
-    local color
-    repeat
-        local r = math.random(0, 255)
-        local g = math.random(0, 255)
-        local b = math.random(0, 255)
-        color = bit32.lshift(r, 16) + bit32.lshift(g, 8) + b
-    until color ~= lastColor
-    lastColor = color
-    return color
-end
-
--- Parse money string like "82.5M"
 local function parseMoney(str)
     if not str or str == "" then return 0 end
     local num, suffix = str:match("([%d%.]+)%s*([KMBT]?)")
@@ -179,8 +163,10 @@ local function sendHighlightWebhook(pets, webhookURL)
     end)
 end
 
--- 🔁 Main loop fix HighMin hoạt động cùng Highlight ≥10M
-local sent = {}
+-- 🔁 Main loop với sent riêng cho từng loại để High và Highlight cùng gửi
+local sentHighlight = {}
+local sentHigh = {}
+local sentLow = {}
 
 task.spawn(function()
     while true do
@@ -190,27 +176,27 @@ task.spawn(function()
 
             for _, pet in ipairs(allPets) do
                 local id = pet.name .. "|" .. pet.gen
-                if not sent[id] then
-                    -- Highlight (≥10M) - màu cam
-                    if pet.value >= getgenv().HighlightMin then
-                        table.insert(highlight, pet)
-                    end
 
-                    -- High (≥10M) - màu đỏ
-                    if pet.value >= getgenv().HighMin then
-                        table.insert(high, pet)
-                    end
+                -- Highlight (≥10M) - màu cam
+                if pet.value >= getgenv().HighlightMin and not sentHighlight[id] then
+                    table.insert(highlight, pet)
+                    sentHighlight[id] = true
+                end
 
-                    -- Low (1M–10M) - màu xanh
-                    if pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax then
-                        table.insert(low, pet)
-                    end
+                -- High (≥10M) - màu đỏ
+                if pet.value >= getgenv().HighMin and not sentHigh[id] then
+                    table.insert(high, pet)
+                    sentHigh[id] = true
+                end
 
-                    -- đánh dấu đã gửi để không spam
-                    sent[id] = true
+                -- Low (1M–10M) - màu xanh
+                if pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax and not sentLow[id] then
+                    table.insert(low, pet)
+                    sentLow[id] = true
                 end
             end
 
+            -- Gửi webhook
             if #highlight > 0 then
                 sendHighlightWebhook(highlight, getgenv().webhookHighlight)
             end
