@@ -171,95 +171,68 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local PlaceId = game.PlaceId
-
------------------------------------------------------
--- 🌟 UI FULL MÀN HÌNH + COUNTDOWN
------------------------------------------------------
-local screenGui = Instance.new("ScreenGui")
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(1, 0, 1, 0)  -- FULL MÀN HÌNH CHUẨN
-frame.BackgroundColor3 = Color3.new(1, 1, 1)
-frame.BorderSizePixel = 0
-frame.Parent = screenGui
-
-local countdownText = Instance.new("TextLabel")
-countdownText.Size = UDim2.new(0, 200, 0, 100)
-countdownText.Position = UDim2.new(0.5, -100, 0.5, -50)
-countdownText.BackgroundTransparency = 1
-countdownText.TextScaled = true
-countdownText.Font = Enum.Font.SourceSansBold
-countdownText.TextColor3 = Color3.new(0, 0, 0)
-countdownText.Parent = frame
-
--- ⏱ 4s countdown
-for i = 4, 1, -1 do
-    countdownText.Text = i .. "s"
-    task.wait(1)
-end
+local PlaceId = 109983668079237 -- Thay bằng Place ID của bạn
 
 -----------------------------------------------------
 -- 🔎 TÌM SERVER KHÔNG FULL + KHÁC JOB ID
 -----------------------------------------------------
 local function findServer()
-    local currentJobId = game.JobId
     local cursor = ""
+    local currentJob = game.JobId
 
     while true do
-        local url = "https://games.roblox.com/v1/games/" .. PlaceId ..
-            "/servers/Public?sortOrder=Asc&limit=100" ..
-            (cursor ~= "" and "&cursor=" .. cursor or "")
+        local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?limit=100&sortOrder=Asc" ..
+            (cursor ~= "" and "&cursor="..cursor or "")
 
         local data
-        local success = pcall(function()
+        local ok = pcall(function()
             data = HttpService:JSONDecode(game:HttpGet(url))
         end)
+        if not ok then break end
 
-        if success and data and data.data then
-            for _, server in ipairs(data.data) do
-                if server.id ~= currentJobId and server.playing < server.maxPlayers then
-                    return server.id
-                end
+        for _, s in pairs(data.data) do
+            if s.id ~= currentJob and s.playing < s.maxPlayers - 1 then
+                return s.id
             end
-
-            if data.nextPageCursor then
-                cursor = data.nextPageCursor
-            else
-                break
-            end
-        else
-            break
         end
+
+        if not data.nextPageCursor then break end
+        cursor = data.nextPageCursor
     end
 
     return nil
 end
 
 -----------------------------------------------------
--- 🔄 TELEPORT AN TOÀN + TỰ THỬ LẠI
+-- 🔄 TELEPORT CÓ RETRY
 -----------------------------------------------------
-local function safeTeleport()
-    for tries = 1, 10 do
+function safeTeleport()
+    for i = 1, 15 do
         local serverId = findServer()
-        if serverId then
-            print("➡ Thử teleport lần", tries, "tới server:", serverId)
 
-            local ok = pcall(function()
+        if serverId then
+            print("➡ Teleport thử:", i, "->", serverId)
+
+            local success = pcall(function()
                 TeleportService:TeleportToPlaceInstance(PlaceId, serverId, player)
             end)
 
-            if ok then
-                return
-            end
+            if success then return end
         end
+
         task.wait(1)
     end
 
-    warn("❌ Không tìm được server khác sau 10 lần thử.")
+    warn("❌ Không tìm được server khác sau nhiều lần thử")
 end
 
+-----------------------------------------------------
+-- 🔁 TỰ ĐỘNG THỬ LẠI NẾU TELEPORT FAIL
+-----------------------------------------------------
+TeleportService.TeleportInitFailed:Connect(function()
+    task.wait(1)
+    safeTeleport()
+end)
+
+task.wait(1)
 safeTeleport()
