@@ -92,7 +92,7 @@ local function sendWebhook(pets, webhookURL)
         table.insert(petLines, string.format("%-20s %-"..maxMoneyLen.."s", displayName, pet.gen))
     end
 
-    table.insert(petLines, string.format("👥 𝐏𝐥𝐚𝐲𝐞𝐫𝐬 %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
+    table.insert(petLines, string.format("👥 Players %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
 
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
@@ -111,7 +111,7 @@ local function sendWebhook(pets, webhookURL)
         embeds = {{
             title = "**𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐊𝐚𝐢**",
             description = string.format(
-                "%s\n🆔 𝐉𝐨𝐛𝐈𝐃: `%s`\n🌐 𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤: [Click to Join](%s)\n📜 𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭:\n```lua\n%s\n```",
+                "%s\n🆔 𝐉𝐨𝐛𝐈𝐃 `%s`\n🌐 𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤 [Click to Join](%s)\n📜 𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭\n```lua\n%s\n```",
                 petText, game.JobId, joinLink, tpScript
             ),
             color = 255, 
