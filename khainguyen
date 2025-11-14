@@ -3,7 +3,7 @@ getgenv().webhookHighlight = "https://discord.com/api/webhooks/14389436912209797
 getgenv().webhookHigh      = "https://discord.com/api/webhooks/1438930956479107274/CCvp_89jS03b8wJOaXZ-zxOPdkINH-yfGQ3nF3AHyXrljsfSnIkUOwBzNc_tQDG4wF7V"
 getgenv().webhookLow       = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
 
-getgenv().HighlightMin = 1 -- pets ≥100M
+getgenv().HighlightMin = 10_000_000 -- pets ≥100M
 getgenv().HighMin      = 10_000_000  -- pets 10M–100M
 getgenv().LowMin       = 1_000_000
 getgenv().LowMax       = 10_000_000
