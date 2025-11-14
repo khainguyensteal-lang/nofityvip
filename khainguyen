@@ -1,5 +1,8 @@
+repeat task.wait() until game:IsLoaded()
+task.wait(2)
+
 getgenv().webhookHigh = "https://discord.com/api/webhooks/1438865076655493282/nPPLQSR-D43dQs8xNwv0kdhxDdjZXg-wo20BU-giDnYawo6SGWmL773ZwpicksQgGu-T" -- ≥10M
-getgenv().webhookLow  = "https://discord.com/api/webhooks/1438097025634799616/X2is7ZIx0k0CiJh-tFo4dlCyBdpDPO5gMrMtFV8r22yIjm6prTsPeS6xHy3aqJkE9Dw6" -- 1M–7M
+getgenv().webhookLow  = "https://discord.com/api/webhooks/1438865076655493282/nPPLQSR-D43dQs8xNwv0kdhxDdjZXg-wo20BU-giDnYawo6SGWmL773ZwpicksQgGu-T" -- 1M–7M
 getgenv().HighMin = 10_000_000
 getgenv().LowMin  = 1_000_000
 getgenv().LowMax  = 10_000_000
