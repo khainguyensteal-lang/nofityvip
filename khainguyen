@@ -169,102 +169,56 @@ end)
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local PlaceId = game.PlaceId
 
 -----------------------------------------------------
 -- 🌟 UI FULL MÀN HÌNH + COUNTDOWN
 -----------------------------------------------------
-local screenGui = Instance.new("ScreenGui")
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = player:WaitForChild("PlayerGui")
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(1, 0, 1, 0)
 frame.BackgroundColor3 = Color3.new(1, 1, 1)
 frame.BorderSizePixel = 0
-frame.Parent = screenGui
+frame.Parent = gui
 
-local countdownText = Instance.new("TextLabel")
-countdownText.Size = UDim2.new(0, 200, 0, 100)
-countdownText.Position = UDim2.new(0.5, -100, 0.5, -50)
-countdownText.BackgroundTransparency = 1
-countdownText.TextScaled = true
-countdownText.Font = Enum.Font.SourceSansBold
-countdownText.TextColor3 = Color3.new(0, 0, 0)
-countdownText.Parent = frame
+local txt = Instance.new("TextLabel")
+txt.Size = UDim2.new(0, 250, 0, 120)
+txt.Position = UDim2.new(0.5, -125, 0.5, -60)
+txt.BackgroundTransparency = 1
+txt.TextScaled = true
+txt.Font = Enum.Font.SourceSansBold
+txt.TextColor3 = Color3.new(0, 0, 0)
+txt.Parent = frame
 
+-----------------------------------------------------
+-- ⏱ COUNTDOWN 4 GIÂY
+-----------------------------------------------------
 for i = 4, 1, -1 do
-    countdownText.Text = i .. "s"
+    txt.Text = i .. "s"
     task.wait(1)
 end
 
 -----------------------------------------------------
--- 🔀 RANDOM SERVER LIÊN TỤC
+-- 🚀 RANDOM TELEPORTSERVICE (Không dùng API)
 -----------------------------------------------------
-local function shuffle(t)
-    -- Fisher-Yates shuffle
-    for i = #t, 2, -1 do
-        local j = math.random(1, i)
-        t[i], t[j] = t[j], t[i]
-    end
-end
+while true do
+    print("➡ Random teleport…")
 
-local function findRandomServer()
-    local currentJobId = game.JobId
-    local cursor = ""
-    local servers = {}
+    -- 🔀 Teleport random server
+    local success = pcall(function()
+        TeleportService:Teleport(PlaceId, player)
+    end)
 
-    while true do
-        local url = "https://games.roblox.com/v1/games/" .. PlaceId ..
-            "/servers/Public?sortOrder=Asc&limit=100" ..
-            (cursor ~= "" and "&cursor=" .. cursor or "")
-
-        local data
-        local ok = pcall(function()
-            data = HttpService:JSONDecode(game:HttpGet(url))
-        end)
-
-        if ok and data and data.data then
-            for _, s in ipairs(data.data) do
-                if s.id ~= currentJobId and s.playing < s.maxPlayers then
-                    table.insert(servers, s.id)
-                end
-            end
-
-            if not data.nextPageCursor then break end
-            cursor = data.nextPageCursor
-        else
-            break
-        end
+    if success then
+        break -- Thành công → đã rời server
+    else
+        warn("❌ Teleport FAIL → thử lại...")
     end
 
-    if #servers == 0 then return nil end
-
-    shuffle(servers)  -- 🔀 RANDOM LIST SERVER
-
-    return servers[1] -- Lấy random server bất kỳ
+    task.wait(0.1) -- retry nhanh
 end
-
------------------------------------------------------
--- 🔄 TELEPORT NGẪU NHIÊN + TỰ THỬ LẠI
------------------------------------------------------
-local function safeTeleport()
-    for tries = 1, 15 do
-        local serverId = findRandomServer()
-        if serverId then
-            print("➡ Teleport lần", tries, "tới server:", serverId)
-            local ok = pcall(function()
-                TeleportService:TeleportToPlaceInstance(PlaceId, serverId, player)
-            end)
-            if ok then return end
-        end
-        task.wait(1)
-    end
-
-    warn("❌ Không tìm được server mới sau nhiều lần thử.")
-end
-
-safeTeleport()
