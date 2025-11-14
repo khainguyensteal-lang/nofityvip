@@ -171,60 +171,95 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local PlaceId = game.PlaceId -- ID của game hiện tại
+local PlaceId = game.PlaceId
 
--- 🌟 Tạo màn hình trắng full-screen
+-----------------------------------------------------
+-- 🌟 UI FULL MÀN HÌNH + COUNTDOWN
+-----------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(1, 0, 2, 0)
-frame.BackgroundColor3 = Color3.new(1, 1, 1) -- trắng
+frame.Size = UDim2.new(1, 0, 1, 0)  -- FULL MÀN HÌNH CHUẨN
+frame.BackgroundColor3 = Color3.new(1, 1, 1)
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
--- 🔢 Tạo text đếm ngược
 local countdownText = Instance.new("TextLabel")
 countdownText.Size = UDim2.new(0, 200, 0, 100)
 countdownText.Position = UDim2.new(0.5, -100, 0.5, -50)
 countdownText.BackgroundTransparency = 1
 countdownText.TextScaled = true
 countdownText.Font = Enum.Font.SourceSansBold
-countdownText.TextColor3 = Color3.new(0,0,0)
+countdownText.TextColor3 = Color3.new(0, 0, 0)
 countdownText.Parent = frame
 
--- ⏱ Đếm ngược 4 giây
+-- ⏱ 4s countdown
 for i = 4, 1, -1 do
-    countdownText.Text = "" .. i .. "s"
-    wait(1)
+    countdownText.Text = i .. "s"
+    task.wait(1)
 end
 
--- 🔀 Lấy danh sách server còn trống
-local function getRandomServer()
-    local success, result = pcall(function()
-        local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-        local response = game:HttpGet(url)
-        return HttpService:JSONDecode(response)
-    end)
-    if success and result and result.data then
-        local servers = {}
-        for _, v in ipairs(result.data) do
-            if v.playing < v.maxPlayers then
-                table.insert(servers, v.id)
+-----------------------------------------------------
+-- 🔎 TÌM SERVER KHÔNG FULL + KHÁC JOB ID
+-----------------------------------------------------
+local function findServer()
+    local currentJobId = game.JobId
+    local cursor = ""
+
+    while true do
+        local url = "https://games.roblox.com/v1/games/" .. PlaceId ..
+            "/servers/Public?sortOrder=Asc&limit=100" ..
+            (cursor ~= "" and "&cursor=" .. cursor or "")
+
+        local data
+        local success = pcall(function()
+            data = HttpService:JSONDecode(game:HttpGet(url))
+        end)
+
+        if success and data and data.data then
+            for _, server in ipairs(data.data) do
+                if server.id ~= currentJobId and server.playing < server.maxPlayers then
+                    return server.id
+                end
             end
-        end
-        if #servers > 0 then
-            return servers[math.random(1, #servers)]
+
+            if data.nextPageCursor then
+                cursor = data.nextPageCursor
+            else
+                break
+            end
+        else
+            break
         end
     end
+
     return nil
 end
 
--- 🔄 Teleport tới server ngẫu nhiên
-local randomServerId = getRandomServer()
-if randomServerId then
-    TeleportService:TeleportToPlaceInstance(PlaceId, randomServerId, player)
-else
-    warn("Không tìm thấy server trống, thử lại sau.")
+-----------------------------------------------------
+-- 🔄 TELEPORT AN TOÀN + TỰ THỬ LẠI
+-----------------------------------------------------
+local function safeTeleport()
+    for tries = 1, 10 do
+        local serverId = findServer()
+        if serverId then
+            print("➡ Thử teleport lần", tries, "tới server:", serverId)
+
+            local ok = pcall(function()
+                TeleportService:TeleportToPlaceInstance(PlaceId, serverId, player)
+            end)
+
+            if ok then
+                return
+            end
+        end
+        task.wait(1)
+    end
+
+    warn("❌ Không tìm được server khác sau 10 lần thử.")
 end
+
+safeTeleport()
