@@ -1,13 +1,16 @@
 -- ⚙️ CONFIG
-getgenv().webhookHigh = "https://discord.com/api/webhooks/1438930956479107274/CCvp_89jS03b8wJOaXZ-zxOPdkINH-yfGQ3nF3AHyXrljsfSnIkUOwBzNc_tQDG4wF7V"
-getgenv().webhookLow  = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
-getgenv().HighMin = 10_000_000
-getgenv().LowMin  = 1_000_000
-getgenv().LowMax  = 10_000_000
+getgenv().webhookHighlight = "https://discord.com/api/webhooks/1438943691220979763/b8zD7MlcF9phNI-Y8piQI4_FNLc-b3X7XQSJz9NzbHkkgafLUGUO-Enr_YeVu3zYc21h"
+getgenv().webhookHigh      = "https://discord.com/api/webhooks/1438930956479107274/CCvp_89jS03b8wJOaXZ-zxOPdkINH-yfGQ3nF3AHyXrljsfSnIkUOwBzNc_tQDG4wF7V"
+getgenv().webhookLow       = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
+
+getgenv().HighlightMin = 10_000_000
+getgenv().HighMin      = 10_000_000
+getgenv().LowMin       = 1_000_000
+getgenv().LowMax       = 10_000_000
 
 local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local Players     = game:GetService("Players")
+local Workspace   = game:GetService("Workspace")
 
 local lastColor = nil
 
@@ -24,6 +27,7 @@ local function getRandomColor()
     return color
 end
 
+-- Parse money string like "82.5M"
 local function parseMoney(str)
     if not str or str == "" then return 0 end
     local num, suffix = str:match("([%d%.]+)%s*([KMBT]?)")
@@ -45,6 +49,7 @@ local function getObjectText(obj)
     end
 end
 
+-- Scan pets in plot
 local function scanPets(plot)
     local pets = {}
     for _, obj in ipairs(plot:GetDescendants()) do
@@ -60,12 +65,12 @@ local function scanPets(plot)
 
         if display and gen then
             local nameText = getObjectText(display) or "???"
-            local genText = getObjectText(gen) or "$???/s"
-            local value = parseMoney(genText)
+            local genText  = getObjectText(gen) or "$???/s"
+            local value    = parseMoney(genText)
 
             table.insert(pets, {
                 name = nameText,
-                gen = genText,
+                gen  = genText,
                 value = value
             })
         end
@@ -73,6 +78,7 @@ local function scanPets(plot)
     return pets
 end
 
+-- Send normal high/low webhook
 local function sendWebhook(pets, webhookURL)
     if #pets == 0 or not webhookURL then return end
 
@@ -83,13 +89,12 @@ local function sendWebhook(pets, webhookURL)
     end
 
     local petLines = {}
-
     for _, pet in ipairs(pets) do
         local displayName = pet.name
         if #displayName > 17 then
             displayName = string.sub(displayName, 1, 17) .. "..."
         end
-        table.insert(petLines, string.format("🏷️ %-20s %-"..maxMoneyLen.."s", displayName, pet.gen))
+        table.insert(petLines, string.format("%-20s %-"..maxMoneyLen.."s", displayName, pet.gen))
     end
 
     table.insert(petLines, string.format("👥 Players %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
@@ -114,7 +119,7 @@ local function sendWebhook(pets, webhookURL)
                 "%s\n🆔 𝐉𝐨𝐛𝐈𝐃 `%s`\n🌐 𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤 [Click to Join](%s)\n📜 𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭\n```lua\n%s\n```",
                 petText, game.JobId, joinLink, tpScript
             ),
-            color = 255, 
+            color = 255,
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
         }}
@@ -134,18 +139,61 @@ local function sendWebhook(pets, webhookURL)
     end)
 end
 
+-- Send highlight webhook ≥100M (simplified)
+local function sendHighlightWebhook(pets, webhookURL)
+    if #pets == 0 or not webhookURL then return end
+
+    local petLines = {}
+    for _, pet in ipairs(pets) do
+        local displayName = pet.name
+        if #displayName > 25 then
+            displayName = string.sub(displayName, 1, 25) .. "..."
+        end
+        table.insert(petLines, string.format("🏷️ %-25s  $%s/s", displayName, pet.gen))
+    end
+
+    local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
+
+    local embed = {
+        username = "**𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐊𝐚𝐢**",
+        embeds = {{
+            description = petText,
+            color = 0xFFAA00, 
+            footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧"},
+            timestamp = DateTime.now():ToIsoDate()
+        }}
+    }
+
+    local json = HttpService:JSONEncode(embed)
+    local req = http_request or request or (syn and syn.request) or (http and http.request)
+    if not req then return end
+
+    pcall(function()
+        req({
+            Url = webhookURL,
+            Method = "POST",
+            Headers = { ["Content-Type"] = "application/json" },
+            Body = json
+        })
+    end)
+end
+
+-- Main loop
 local sent = {}
 
 task.spawn(function()
     while true do
         for _, plot in pairs(Workspace.Plots:GetChildren()) do
             local allPets = scanPets(plot)
-            local high, low = {}, {}
+            local highlight, high, low = {}, {}, {}
 
             for _, pet in ipairs(allPets) do
                 local id = pet.name .. "|" .. pet.gen
                 if not sent[id] then
-                    if pet.value >= getgenv().HighMin then
+                    if pet.value >= getgenv().HighlightMin then
+                        table.insert(highlight, pet)
+                        sent[id] = true
+                    elseif pet.value >= getgenv().HighMin then
                         table.insert(high, pet)
                         sent[id] = true
                     elseif pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax then
@@ -155,6 +203,9 @@ task.spawn(function()
                 end
             end
 
+            if #highlight > 0 then
+                sendHighlightWebhook(highlight, getgenv().webhookHighlight)
+            end
             if #high > 0 then
                 sendWebhook(high, getgenv().webhookHigh)
             end
