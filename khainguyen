@@ -1,8 +1,6 @@
-repeat task.wait() until game:IsLoaded()
-task.wait(2)
-
-getgenv().webhookHigh = "https://discord.com/api/webhooks/1438865076655493282/nPPLQSR-D43dQs8xNwv0kdhxDdjZXg-wo20BU-giDnYawo6SGWmL773ZwpicksQgGu-T" -- ≥10M
-getgenv().webhookLow  = "https://discord.com/api/webhooks/1438865076655493282/nPPLQSR-D43dQs8xNwv0kdhxDdjZXg-wo20BU-giDnYawo6SGWmL773ZwpicksQgGu-T" -- 1M–7M
+-- ⚙️ CONFIG
+getgenv().webhookHigh = "https://discord.com/api/webhooks/1438930956479107274/CCvp_89jS03b8wJOaXZ-zxOPdkINH-yfGQ3nF3AHyXrljsfSnIkUOwBzNc_tQDG4wF7V"
+getgenv().webhookLow  = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
 getgenv().HighMin = 10_000_000
 getgenv().LowMin  = 1_000_000
 getgenv().LowMax  = 10_000_000
@@ -13,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local lastColor = nil
 
+-- Random color for embed
 local function getRandomColor()
     local color
     repeat
@@ -34,17 +33,7 @@ local function parseMoney(str)
     return num * mult
 end
 
-local function getPlotOwner(plot)
-    local sign = plot:FindFirstChild("PlotSign")
-    if sign and sign:FindFirstChild("SurfaceGui") then
-        local frame = sign.SurfaceGui:FindFirstChild("Frame")
-        if frame and frame:FindFirstChild("TextLabel") then
-            return tostring(frame.TextLabel.Text)
-        end
-    end
-    return "Unknown Owner"
-end
-
+-- Get object text
 local function getObjectText(obj)
     if not obj then return nil end
     if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
@@ -58,7 +47,6 @@ end
 
 local function scanPets(plot)
     local pets = {}
-    local owner = getPlotOwner(plot)
     for _, obj in ipairs(plot:GetDescendants()) do
         local display, gen
         for _, child in ipairs(obj:GetDescendants()) do
@@ -73,30 +61,40 @@ local function scanPets(plot)
         if display and gen then
             local nameText = getObjectText(display) or "???"
             local genText = getObjectText(gen) or "$???/s"
-            local fullText = genText
             local value = parseMoney(genText)
 
             table.insert(pets, {
                 name = nameText,
-                gen = fullText,
-                value = value,
-                owner = owner
+                gen = genText,
+                value = value
             })
         end
     end
     return pets
 end
 
-local function sendWebhook(pets, webhookURL, label)
+local function sendWebhook(pets, webhookURL)
     if #pets == 0 or not webhookURL then return end
 
-    local owner = pets[1].owner or "Unknown Owner"
-    local lines = {}
+    local maxMoneyLen = 0
     for _, pet in ipairs(pets) do
-        table.insert(lines, string.format("• %s [%s]", pet.name, pet.gen))
+        local len = #pet.gen
+        if len > maxMoneyLen then maxMoneyLen = len end
     end
 
-    local petBlock = "```md\n" .. table.concat(lines, "\n") .. "\n```"
+    local petLines = {}
+
+    for _, pet in ipairs(pets) do
+        local displayName = pet.name
+        if #displayName > 17 then
+            displayName = string.sub(displayName, 1, 17) .. "..."
+        end
+        table.insert(petLines, string.format("%-20s %-"..maxMoneyLen.."s", displayName, pet.gen))
+    end
+
+    table.insert(petLines, string.format("👥 𝐏𝐥𝐚𝐲𝐞𝐫𝐬 %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
+
+    local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
     local joinLink = string.format(
         "https://chillihub1.github.io/chillihub-joiner/?placeId=%d&gameInstanceId=%s",
@@ -111,12 +109,12 @@ local function sendWebhook(pets, webhookURL, label)
     local embed = {
         username = "🛰️ 𝐃𝐞𝐧𝐊𝐚𝐢",
         embeds = {{
-            title = "**" .. label .. " | 𝐃𝐞𝐧𝐊𝐚𝐢 𝐍𝐨𝐭𝐢𝐟𝐲**",
+            title = "**𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐊𝐚𝐢**",
             description = string.format(
-           "🔍 **𝐅𝐨𝐮𝐧𝐝 %d 𝐏𝐞𝐭𝐬!** | 👤 **𝐎𝐰𝐧𝐞𝐫:** %s\n\n%s\n\n👥 **𝐏𝐥𝐚𝐲𝐞𝐫𝐬**\n%d / %d\n🆔 **𝐉𝐨𝐛𝐈𝐃**\n```text\n%s\n```\n🌐 **𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤**\n[𝐂𝐥𝐢𝐜𝐤 𝐭𝐨 𝐉𝐨𝐢𝐧](%s)\n📜 **𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭**\n```lua\n%s\n```",
-           #pets, owner, petBlock, #Players:GetPlayers(), Players.MaxPlayers, game.JobId, joinLink, tpScript
-    ),
-            color = getRandomColor(), 
+                "%s\n🆔 𝐉𝐨𝐛𝐈𝐃: `%s`\n🌐 𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤: [Click to Join](%s)\n📜 𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭:\n```lua\n%s\n```",
+                petText, game.JobId, joinLink, tpScript
+            ),
+            color = 255, 
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
         }}
@@ -137,91 +135,33 @@ local function sendWebhook(pets, webhookURL, label)
 end
 
 local sent = {}
+
 task.spawn(function()
     while true do
-        local playerCount = #Players:GetPlayers()
-        if playerCount >= 4 then  
-            for _, plot in pairs(Workspace.Plots:GetChildren()) do
-                local allPets = scanPets(plot)
-                local high, low = {}, {}
+        for _, plot in pairs(Workspace.Plots:GetChildren()) do
+            local allPets = scanPets(plot)
+            local high, low = {}, {}
 
-                for _, pet in ipairs(allPets) do
-                    local id = pet.name .. "|" .. pet.gen .. "|" .. pet.owner
-                    if not sent[id] then
-                        if pet.value >= getgenv().HighMin then
-                            table.insert(high, pet)
-                            sent[id] = true
-                        elseif pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax then
-                            table.insert(low, pet)
-                            sent[id] = true
-                        end
+            for _, pet in ipairs(allPets) do
+                local id = pet.name .. "|" .. pet.gen
+                if not sent[id] then
+                    if pet.value >= getgenv().HighMin then
+                        table.insert(high, pet)
+                        sent[id] = true
+                    elseif pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax then
+                        table.insert(low, pet)
+                        sent[id] = true
                     end
                 end
+            end
 
-                if #high > 0 then
-                    sendWebhook(high, getgenv().webhookHigh, "𝟏𝟎-𝟏𝟎𝟎𝐦")
-                end
-                if #low > 0 then
-                    sendWebhook(low, getgenv().webhookLow, "𝟏-𝟏𝟎𝐦")
-                end
+            if #high > 0 then
+                sendWebhook(high, getgenv().webhookHigh)
+            end
+            if #low > 0 then
+                sendWebhook(low, getgenv().webhookLow)
             end
         end
         task.wait(1)
     end
 end)
-
-local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local player = Players.LocalPlayer
-local PlaceId = game.PlaceId
-
------------------------------------------------------
--- 🌟 UI FULL MÀN HÌNH + COUNTDOWN
------------------------------------------------------
-local gui = Instance.new("ScreenGui")
-gui.IgnoreGuiInset = true
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(1, 0, 1, 0)
-frame.BackgroundColor3 = Color3.new(1, 1, 1)
-frame.BorderSizePixel = 0
-frame.Parent = gui
-
-local txt = Instance.new("TextLabel")
-txt.Size = UDim2.new(0, 250, 0, 120)
-txt.Position = UDim2.new(0.5, -125, 0.5, -60)
-txt.BackgroundTransparency = 1
-txt.TextScaled = true
-txt.Font = Enum.Font.SourceSansBold
-txt.TextColor3 = Color3.new(0, 0, 0)
-txt.Parent = frame
-
------------------------------------------------------
--- ⏱ COUNTDOWN 4 GIÂY
------------------------------------------------------
-for i = 4, 1, -1 do
-    txt.Text = i .. "s"
-    task.wait(1)
-end
-
------------------------------------------------------
--- 🚀 RANDOM TELEPORTSERVICE (Không dùng API)
------------------------------------------------------
-while true do
-    print("➡ Random teleport…")
-
-    -- 🔀 Teleport random server
-    local success = pcall(function()
-        TeleportService:Teleport(PlaceId, player)
-    end)
-
-    if success then
-        break -- Thành công → đã rời server
-    else
-        warn("❌ Teleport FAIL → thử lại...")
-    end
-
-    task.wait(0.1) -- retry nhanh
-end
