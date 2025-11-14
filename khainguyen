@@ -89,7 +89,7 @@ local function sendWebhook(pets, webhookURL)
         if #displayName > 17 then
             displayName = string.sub(displayName, 1, 17) .. "..."
         end
-        table.insert(petLines, string.format("%-20s %-"..maxMoneyLen.."s", displayName, pet.gen))
+        table.insert(petLines, string.format("🏷️ %-20s %-"..maxMoneyLen.."s", displayName, pet.gen))
     end
 
     table.insert(petLines, string.format("👥 Players %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
