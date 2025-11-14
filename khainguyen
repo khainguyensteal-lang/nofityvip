@@ -171,68 +171,63 @@ local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
-local PlaceId = 109983668079237 -- Thay bằng Place ID của bạn
+local PlaceId = game.PlaceId
 
------------------------------------------------------
--- 🔎 TÌM SERVER KHÔNG FULL + KHÁC JOB ID
------------------------------------------------------
-local function findServer()
-    local cursor = ""
-    local currentJob = game.JobId
+-- 🌟 Tạo màn hình trắng full-screen
+local screenGui = Instance.new("ScreenGui")
+screenGui.IgnoreGuiInset = true   -- ❗ Giúp full screen không bị trừ phần top bar
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
-    while true do
-        local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?limit=100&sortOrder=Asc" ..
-            (cursor ~= "" and "&cursor="..cursor or "")
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(1, 0, 1, 0)
+frame.Position = UDim2.new(0, 0, 0, 0)  -- ❗ đảm bảo full theo góc 0,0
+frame.BackgroundColor3 = Color3.new(1, 1, 1)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
 
-        local data
-        local ok = pcall(function()
-            data = HttpService:JSONDecode(game:HttpGet(url))
-        end)
-        if not ok then break end
+-- 🔢 Text đếm ngược
+local countdownText = Instance.new("TextLabel")
+countdownText.Size = UDim2.new(0, 250, 0, 120)
+countdownText.Position = UDim2.new(0.5, -125, 0.5, -60)
+countdownText.BackgroundTransparency = 1
+countdownText.TextScaled = true
+countdownText.Font = Enum.Font.GothamBold
+countdownText.TextColor3 = Color3.fromRGB(0,0,0)
+countdownText.Parent = frame
 
-        for _, s in pairs(data.data) do
-            if s.id ~= currentJob and s.playing < s.maxPlayers - 1 then
-                return s.id
+-- ⏱ Đếm ngược
+for i = 4, 1, -1 do
+    countdownText.Text = i .. "s"
+    task.wait(1)
+end
+
+-- 🔍 Hàm lấy server ngẫu nhiên còn chỗ
+local function getRandomServer()
+    local success, result = pcall(function()
+        local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+        local response = game:HttpGet(url)
+        return HttpService:JSONDecode(response)
+    end)
+
+    if success and result and result.data then
+        local servers = {}
+        for _, v in ipairs(result.data) do
+            if v.playing < v.maxPlayers then
+                table.insert(servers, v.id)
             end
         end
-
-        if not data.nextPageCursor then break end
-        cursor = data.nextPageCursor
+        if #servers > 0 then
+            return servers[math.random(1, #servers)]
+        end
     end
-
     return nil
 end
 
------------------------------------------------------
--- 🔄 TELEPORT CÓ RETRY
------------------------------------------------------
-function safeTeleport()
-    for i = 1, 15 do
-        local serverId = findServer()
-
-        if serverId then
-            print("➡ Teleport thử:", i, "->", serverId)
-
-            local success = pcall(function()
-                TeleportService:TeleportToPlaceInstance(PlaceId, serverId, player)
-            end)
-
-            if success then return end
-        end
-
-        task.wait(1)
-    end
-
-    warn("❌ Không tìm được server khác sau nhiều lần thử")
+-- 🚀 Teleport
+local randomServerId = getRandomServer()
+if randomServerId then
+    TeleportService:TeleportToPlaceInstance(PlaceId, randomServerId, player)
+else
+    warn("Không tìm thấy server trống.")
 end
-
------------------------------------------------------
--- 🔁 TỰ ĐỘNG THỬ LẠI NẾU TELEPORT FAIL
------------------------------------------------------
-TeleportService.TeleportInitFailed:Connect(function()
-    task.wait(1)
-    safeTeleport()
-end)
-
-task.wait(1)
-safeTeleport()
