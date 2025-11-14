@@ -3,7 +3,7 @@ getgenv().webhookHighlight = "https://discord.com/api/webhooks/14389436912209797
 getgenv().webhookHigh      = "https://discord.com/api/webhooks/1438930956479107274/CCvp_89jS03b8wJOaXZ-zxOPdkINH-yfGQ3nF3AHyXrljsfSnIkUOwBzNc_tQDG4wF7V"
 getgenv().webhookLow       = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
 
-getgenv().HighlightMin = 1 -- pets ≥100M
+getgenv().HighlightMin = 10_000_000 -- pets ≥100M
 getgenv().HighMin      = 10_000_000  -- pets 10M–100M
 getgenv().LowMin       = 1_000_000
 getgenv().LowMax       = 10_000_000
@@ -78,7 +78,8 @@ local function scanPets(plot)
     return pets
 end
 
-local function sendWebhook(pets, webhookURL)
+-- Send webhook chung (High và Low)
+local function sendWebhook(pets, webhookURL, embedColor)
     if #pets == 0 or not webhookURL then return end
 
     local maxMoneyLen = 0
@@ -110,11 +111,6 @@ local function sendWebhook(pets, webhookURL)
         game.PlaceId, game.JobId
     )
 
-    local embedColor = 0xFF0000 
-    if pets[1].value < getgenv().HighMin then
-        embedColor = 255 
-    end
-
     local embed = {
         username = "𝐃𝐞𝐧𝐊𝐚𝐢",
         embeds = {{
@@ -143,6 +139,7 @@ local function sendWebhook(pets, webhookURL)
     end)
 end
 
+-- Send highlight (màu cam)
 local function sendHighlightWebhook(pets, webhookURL)
     if #pets == 0 or not webhookURL then return end
 
@@ -158,15 +155,14 @@ local function sendHighlightWebhook(pets, webhookURL)
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
     local embed = {
-        username = "𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐬",
-        embeds = {{
-            title = "𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐊𝐚𝐢",
-
+        username = "𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭",
+        embeds = { {
+            title = "𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐤𝐚𝐢",
             description = petText,
             color = 0xFFAA00,
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
-        }}
+        } }
     }
 
     local json = HttpService:JSONEncode(embed)
@@ -185,6 +181,7 @@ end
 
 local sent = {}
 
+-- 🔁 Main loop giữ nguyên logic
 task.spawn(function()
     while true do
         for _, plot in pairs(Workspace.Plots:GetChildren()) do
@@ -208,13 +205,13 @@ task.spawn(function()
             end
 
             if #highlight > 0 then
-                sendHighlightWebhook(highlight, getgenv().webhookHighlight)
+                sendHighlightWebhook(highlight, getgenv().webhookHighlight) -- cam
             end
             if #high > 0 then
-                sendWebhook(high, getgenv().webhookHigh)
+                sendWebhook(high, getgenv().webhookHigh, 0xFF0000) -- đỏ
             end
             if #low > 0 then
-                sendWebhook(low, getgenv().webhookLow)
+                sendWebhook(low, getgenv().webhookLow, 0x00AAFF) -- xanh
             end
         end
         task.wait(1)
