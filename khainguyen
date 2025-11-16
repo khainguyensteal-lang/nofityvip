@@ -69,7 +69,7 @@ local function sendWebhook(pets, webhookURL, embedColor)
 
     local petLines = {}
     for _, pet in ipairs(pets) do
-        table.insert(petLines, string.format("🏷️ %s [%s]", pet.name, pet.gen))
+        table.insert(petLines, string.format("• %s [%s]", pet.name, pet.gen))
     end
 
     table.insert(petLines, string.format("👥 Players %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
