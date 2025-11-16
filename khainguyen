@@ -66,30 +66,26 @@ end
 local function sendWebhook(pets, webhookURL, embedColor)
     if #pets == 0 or not webhookURL then return end
 
-    local maxMoneyLen = 0
-    for _, pet in ipairs(pets) do
-        local len = #pet.gen
-        if len > maxMoneyLen then maxMoneyLen = len end
-    end
-
     local petLines = {}
     for _, pet in ipairs(pets) do
-        local displayName = pet.name
-        if #displayName > 17 then
-            displayName = string.sub(displayName, 1, 17) .. "..."
-        end
-        table.insert(petLines, string.format("🏷️ %-20s %-"..maxMoneyLen.."s", displayName, pet.gen))
+        local displayName = pet.name  -- không cắt nữa
+        local genText = "[" .. pet.gen .. "]"
+
+        table.insert(petLines, "🏷️ " .. displayName .. " " .. genText)
     end
 
+    -- thêm players
     table.insert(petLines, string.format("👥 Players %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
 
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
+    -- join link
     local joinLink = string.format(
         "https://chillihub1.github.io/chillihub-joiner/?placeId=%d&gameInstanceId=%s",
         game.PlaceId, game.JobId
     )
 
+    -- teleport script
     local tpScript = string.format(
         "game:GetService('TeleportService'):TeleportToPlaceInstance(%d, '%s', game.Players.LocalPlayer)",
         game.PlaceId, game.JobId
