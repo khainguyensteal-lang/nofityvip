@@ -1,7 +1,7 @@
 -- ⚙️ CONFIG
 getgenv().webhookHighlight = "https://discord.com/api/webhooks/1438943691220979763/b8zD7MlcF9phNI-Y8piQI4_FNLc-b3X7XQSJz9NzbHkkgafLUGUO-Enr_YeVu3zYc21h"
 getgenv().webhookHigh      = "https://discord.com/api/webhooks/1438930956479107274/CCvp_89jS03b8wJOaXZ-zxOPdkINH-yfGQ3nF3AHyXrljsfSnIkUOwBzNc_tQDG4wF7V"
-getgenv().webhookLow       = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
+getgenv().webhookLow       = "https://discord.com/api/webhooks/1439470290819092573/ZReqW6GNn5ofT1nHPMvHSNuC1lQrOpCl0-tOkE6InpaogT2vqZ-Dgfp86wlofypPuQ8T"
 
 getgenv().HighlightMin = 10_000_000 -- pets ≥10M
 getgenv().HighMin      = 10_000_000 -- pets ≥10M
