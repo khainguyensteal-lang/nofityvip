@@ -1,7 +1,7 @@
 -- ⚙️ CONFIG
 getgenv().webhookHighlight = "https://discord.com/api/webhooks/1438943691220979763/b8zD7MlcF9phNI-Y8piQI4_FNLc-b3X7XQSJz9NzbHkkgafLUGUO-Enr_YeVu3zYc21h"
 getgenv().webhookHigh      = "https://discord.com/api/webhooks/1438930956479107274/CCvp_89jS03b8wJOaXZ-zxOPdkINH-yfGQ3nF3AHyXrljsfSnIkUOwBzNc_tQDG4wF7V"
-getgenv().webhookLow       = "https://discord.com/api/webhooks/1439470290819092573/ZReqW6GNn5ofT1nHPMvHSNuC1lQrOpCl0-tOkE6InpaogT2vqZ-Dgfp86wlofypPuQ8T"
+getgenv().webhookLow       = "https://discord.com/api/webhooks/1438930856965046393/wYTIODyNuxAkWpgZvAib1EXX6CSGBa0q9oNV8-25TBFGfawNODhrytiSvINE1Wea3-B0"
 
 getgenv().HighlightMin = 10_000_000 -- pets ≥10M
 getgenv().HighMin      = 10_000_000 -- pets ≥10M
@@ -12,6 +12,7 @@ local HttpService = game:GetService("HttpService")
 local Players     = game:GetService("Players")
 local Workspace   = game:GetService("Workspace")
 
+-- Parse money string like "15M" -> number
 local function parseMoney(str)
     if not str or str == "" then return 0 end
     local num, suffix = str:match("([%d%.]+)%s*([KMBT]?)")
@@ -62,30 +63,24 @@ local function scanPets(plot)
     return pets
 end
 
--- Send webhook chung (High và Low)
+-- Send webhook (High & Low)
 local function sendWebhook(pets, webhookURL, embedColor)
     if #pets == 0 or not webhookURL then return end
 
     local petLines = {}
     for _, pet in ipairs(pets) do
-        local displayName = pet.name  -- không cắt nữa
-        local genText = "[" .. pet.gen .. "]"
-
-        table.insert(petLines, "🏷️ " .. displayName .. " " .. genText)
+        table.insert(petLines, string.format("🏷️ %s [%s]", pet.name, pet.gen))
     end
 
-    -- thêm players
     table.insert(petLines, string.format("👥 Players %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
 
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
-    -- join link
     local joinLink = string.format(
         "https://chillihub1.github.io/chillihub-joiner/?placeId=%d&gameInstanceId=%s",
         game.PlaceId, game.JobId
     )
 
-    -- teleport script
     local tpScript = string.format(
         "game:GetService('TeleportService'):TeleportToPlaceInstance(%d, '%s', game.Players.LocalPlayer)",
         game.PlaceId, game.JobId
@@ -93,7 +88,7 @@ local function sendWebhook(pets, webhookURL, embedColor)
 
     local embed = {
         username = "𝐃𝐞𝐧𝐊𝐚𝐢",
-        embeds = {{
+        embeds = { {
             title = "𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐤𝐚𝐢",
             description = string.format(
                 "%s\n🆔 𝐉𝐨𝐛𝐈𝐃 `%s`\n🌐 𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤 [Click to Join](%s)\n📜 𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭\n```lua\n%s\n```",
@@ -102,33 +97,30 @@ local function sendWebhook(pets, webhookURL, embedColor)
             color = embedColor,
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
-        }}
+        } }
     }
 
     local json = HttpService:JSONEncode(embed)
     local req = http_request or request or (syn and syn.request) or (http and http.request)
-    if not req then return end
-
-    pcall(function()
-        req({
-            Url = webhookURL,
-            Method = "POST",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body = json
-        })
-    end)
+    if req then
+        pcall(function()
+            req({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = json
+            })
+        end)
+    end
 end
 
--- Send highlight (màu cam)
+-- Send highlight (màu hồng)
 local function sendHighlightWebhook(pets, webhookURL)
     if #pets == 0 or not webhookURL then return end
 
     local petLines = {}
     for _, pet in ipairs(pets) do
-        local displayName = pet.name -- giữ nguyên, không cắt
-
-        -- gen nằm trong []
-        table.insert(petLines, "🏷️ " .. displayName .. " [" .. pet.gen .. "]")
+        table.insert(petLines, string.format("🏷️ %s [%s]", pet.name, pet.gen))
     end
 
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
@@ -138,7 +130,7 @@ local function sendHighlightWebhook(pets, webhookURL)
         embeds = { {
             title = "𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐤𝐚𝐢",
             description = petText,
-            color = 0xFFAA00,
+            color = 0xFF66CC, -- 💖 màu hồng
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
         } }
@@ -146,20 +138,19 @@ local function sendHighlightWebhook(pets, webhookURL)
 
     local json = HttpService:JSONEncode(embed)
     local req = http_request or request or (syn and syn.request) or (http and http.request)
-    if not req then return end
-
-    pcall(function()
-        req({
-            Url = webhookURL,
-            Method = "POST",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body = json
-        })
-    end)
+    if req then
+        pcall(function()
+            req({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = json
+            })
+        end)
+    end
 end
 
-
--- 🔁 Main loop với sent riêng cho từng loại để High và Highlight cùng gửi
+-- 🔁 Main loop
 local sentHighlight = {}
 local sentHigh = {}
 local sentLow = {}
@@ -173,7 +164,7 @@ task.spawn(function()
             for _, pet in ipairs(allPets) do
                 local id = pet.name .. "|" .. pet.gen
 
-                -- Highlight (≥10M) - màu cam
+                -- Highlight (≥10M) - màu hồng
                 if pet.value >= getgenv().HighlightMin and not sentHighlight[id] then
                     table.insert(highlight, pet)
                     sentHighlight[id] = true
