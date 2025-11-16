@@ -129,17 +129,16 @@ local function sendHighlightWebhook(pets, webhookURL)
 
     local petLines = {}
     for _, pet in ipairs(pets) do
-        local displayName = pet.name
-        if #displayName > 17 then
-            displayName = string.sub(displayName, 1, 17) .. "..."
-        end
-        table.insert(petLines, string.format("🏷️ %-20s  %s", displayName, pet.gen))
+        local displayName = pet.name -- giữ nguyên, không cắt
+
+        -- gen nằm trong []
+        table.insert(petLines, "🏷️ " .. displayName .. " [" .. pet.gen .. "]")
     end
 
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
     local embed = {
-        username = "𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐬",
+        username = "𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬",
         embeds = { {
             title = "𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐤𝐚𝐢",
             description = petText,
@@ -162,6 +161,7 @@ local function sendHighlightWebhook(pets, webhookURL)
         })
     end)
 end
+
 
 -- 🔁 Main loop với sent riêng cho từng loại để High và Highlight cùng gửi
 local sentHighlight = {}
