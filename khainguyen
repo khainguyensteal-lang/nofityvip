@@ -1,5 +1,5 @@
 -- ⚙️ CONFIG
-getgenv().webhookHighlight = "https://discord.com/api/webhooks/1440623159513714700/SLNbyNCkD-zD3hkNZMrnYYauWM9vGg2RZG5OgWWwLdNY_GqB0Lt06xOrhsvBhVIAAJg3"
+getgenv().webhookHighlight = "https://discord.com/api/webhooks/1440635280364408993/UfVCTGlKXCu5P-rH5qUNaXYIUFuNkrGGKIqc8qFzPlvumIXqcDk8A8etMbx7R2MWDlMp"
 getgenv().webhookHigh      = "https://discord.com/api/webhooks/1439621917584654438/ye5VPo_crXuUhFF7TFzBkBhTrK_HyvcjpfCKoPsiKhW7WtYH7nq0wRMtYBLSIRyPww_q"
 getgenv().webhookLow       = "https://discord.com/api/webhooks/1440478556701462682/Wd1wxfqq9Y8TANfWjPGFVftChXvBDZzBJ8Pr0pl4UdPWMerD_dOC2U-NzgfAzaxc79VY"
 
