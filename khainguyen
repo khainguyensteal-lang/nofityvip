@@ -21,7 +21,6 @@ local function parseMoney(str)
     return num * mult
 end
 
--- Get object text
 local function getObjectText(obj)
     if not obj then return nil end
     if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
@@ -33,16 +32,23 @@ local function getObjectText(obj)
     end
 end
 
--- Scan pets in plot
+-- ⭐ FIX: Quét DisplayName / Gen CHUẨN HƠN
 local function scanPets(plot)
     local pets = {}
+
     for _, obj in ipairs(plot:GetDescendants()) do
         local display, gen
+
         for _, child in ipairs(obj:GetDescendants()) do
             local n = child.Name:lower()
-            if n:match("displayname") or n:match("display") then
+
+            if (n:find("display") or n:find("name")) and
+                (child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox")) then
                 display = child
-            elseif n:match("generation") or n:match("gen") then
+            end
+
+            if (n:find("gen") or n:find("eration")) and
+                (child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox")) then
                 gen = child
             end
         end
@@ -59,6 +65,7 @@ local function scanPets(plot)
             })
         end
     end
+
     return pets
 end
 
@@ -71,7 +78,6 @@ local function sendWebhook(pets, webhookURL, embedColor)
     end
 
     table.insert(petLines, string.format("👥 Players %d/%d", #Players:GetPlayers(), Players.MaxPlayers))
-
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
     local joinLink = string.format(
@@ -89,7 +95,7 @@ local function sendWebhook(pets, webhookURL, embedColor)
         embeds = {{
             title = "𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐤𝐚𝐢",
             description = string.format(
-                "%s\n🆔 𝐉𝐨𝐛𝐈𝐃 `%s`\n🌐 𝐉𝐨𝐢𝐧 𝐋𝐢𝐧𝐤 [Click to Join](%s)\n📜 𝐓𝐞𝐥𝐞𝐩𝐨𝐫𝐭\n```lua\n%s\n```",
+                "%s\n🆔 𝐉𝐨𝐛𝐈𝐃 `%s`\n🌐 Join [Click Here](%s)\n📜 Teleport\n```lua\n%s\n```",
                 petText, game.JobId, joinLink, tpScript
             ),
             color = embedColor,
@@ -112,6 +118,7 @@ local function sendWebhook(pets, webhookURL, embedColor)
     end)
 end
 
+-- ⭐ Highlight Webhook riêng
 local function sendHighlightWebhook(pets, webhookURL)
     if #pets == 0 or not webhookURL then return end
 
@@ -123,18 +130,19 @@ local function sendHighlightWebhook(pets, webhookURL)
     local petText = "```text\n" .. table.concat(petLines, "\n") .. "\n```"
 
     local embed = {
-        username = "𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐬",
-        embeds = { {
-            title = "𝐁𝐫𝐚𝐢𝐧𝐫𝐨𝐭 𝐍𝐨𝐭𝐢𝐟𝐲 | 𝐃𝐞𝐧𝐤𝐚𝐢",
+        username = "𝐃𝐞𝐧𝐊𝐚𝐢",
+        embeds = {{
+            title = "🔥 𝐇𝐢𝐠𝐡𝐥𝐢𝐠𝐡𝐭𝐬",
             description = petText,
             color = 0xFFB6C1,
             footer = { text = "𝐌𝐚𝐝𝐞 𝐛𝐲 𝐊𝐡𝐚𝐢𝐧𝐠𝐮𝐲𝐞𝐧" },
             timestamp = DateTime.now():ToIsoDate()
-        } }
+        }}
     }
 
     local json = HttpService:JSONEncode(embed)
     local req = http_request or request or (syn and syn.request) or (http and http.request)
+
     if not req then return end
 
     pcall(function()
@@ -148,6 +156,7 @@ local function sendHighlightWebhook(pets, webhookURL)
 end
 
 
+-- ⭐ TRÁNH GỬI TRÙNG
 local sentHighlight = {}
 local sentHigh = {}
 local sentLow = {}
@@ -161,32 +170,26 @@ task.spawn(function()
             for _, pet in ipairs(allPets) do
                 local id = pet.name .. "|" .. pet.gen
 
+                -- ⭐ Ưu tiên Highlight trước High
                 if pet.value >= getgenv().HighlightMin and not sentHighlight[id] then
                     table.insert(highlight, pet)
                     sentHighlight[id] = true
-                end
 
-                if pet.value >= getgenv().HighMin and not sentHigh[id] then
+                elseif pet.value >= getgenv().HighMin and not sentHigh[id] then
                     table.insert(high, pet)
                     sentHigh[id] = true
-                end
 
-                if pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax and not sentLow[id] then
+                elseif pet.value >= getgenv().LowMin and pet.value <= getgenv().LowMax and not sentLow[id] then
                     table.insert(low, pet)
                     sentLow[id] = true
                 end
             end
 
-            if #highlight > 0 then
-                sendHighlightWebhook(highlight, getgenv().webhookHighlight)
-            end
-            if #high > 0 then
-                sendWebhook(high, getgenv().webhookHigh, 0xFF0000)
-            end
-            if #low > 0 then
-                sendWebhook(low, getgenv().webhookLow, 0x00AAFF)
-            end
+            if #highlight > 0 then sendHighlightWebhook(highlight, getgenv().webhookHighlight) end
+            if #high > 0 then sendWebhook(high, getgenv().webhookHigh, 0xFF0000) end
+            if #low > 0 then sendWebhook(low, getgenv().webhookLow, 0x00AAFF) end
         end
+
         task.wait(1)
     end
 end)
