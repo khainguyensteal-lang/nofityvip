@@ -585,27 +585,25 @@ def build_simple_info_view(emoji: str, message: str, color: discord.Color = disc
 
 def build_confession_panel_container(guild_name: str) -> discord.ui.Container:
     """Nội Dung Panel Confession (Dùng Chung Cho View Bền Vững)."""
-    header = discord.ui.TextDisplay(f"## 💚 **{guild_name}** • 𝐂𝐎𝐍𝐅𝐄𝐒𝐒𝐈𝐎𝐍 💚")
+    header = discord.ui.TextDisplay(f"## 💌 Góc Tâm Sự — **{guild_name}**")
 
     welcome = discord.ui.TextDisplay(
-        "**𝐂𝐇𝐀̀𝐎 𝐌𝐔̛̀𝐍𝐆 𝐁𝐀̣𝐍 Đ𝐄̂́𝐍 𝐕𝐎̛́𝐈 𝐆𝐎́𝐂 𝐓𝐀̂𝐌 𝐒𝐔̛̣! 🕯️**\n\n"
+        "🕯️ **Chào Mừng Bạn Đến Với Góc Tâm Sự!**\n\n"
         "Nơi Bạn Có Thể Trút Bỏ Những Nỗi Niềm Thầm Kín, Gửi Gắm Lời Yêu Thương Ngọt "
         "Ngào Hay Những Lời Xin Lỗi Chưa Dám Ngỏ. Bạn Có Thể Chọn Gửi Ẩn Danh Hoặc "
         "Công Khai Tùy Thích!"
     )
 
     rules = discord.ui.TextDisplay(
-        "⚠️ **𝐇𝐔̛𝐎̛́𝐍𝐆 𝐃𝐀̂̃𝐍 & 𝐍𝐆𝐔𝐘𝐄̂𝐍 𝐓𝐀̆́𝐂:**\n"
-        "- 🎭 **Gửi Ẩn Danh**: Câu Chuyện Của Bạn Được Bảo Mật Tuyệt Đối, Không Ai "
-        "Biết Bạn Là Ai.\n"
-        "- 📢 **Gửi Công Khai**: Confession Sẽ Hiển Thị Tên Và Avatar Của Bạn Để "
-        "Mọi Người Cùng Biết.\n"
-        "- Nghiêm Cấm Các Nội Dung Đả Kích Cá Nhân, Thô Tục, Xúc Phạm Tôn Giáo, Chính "
-        "Trị Hoặc Vi Phạm Luật Chung Của Server.\n"
-        "- Hãy Cùng Nhau Lan Tỏa Những Câu Chuyện Ấm Áp Và Năng Lượng Tích Cực Nhé!"
+        "> ⚠️ **Hướng Dẫn & Nguyên Tắc**\n"
+        "> 🎭 **Gửi Ẩn Danh:** Câu Chuyện Được Bảo Mật, Chỉ Hiện Biệt Danh (Nếu Đặt) Hoặc \"Ẩn Danh\".\n"
+        "> 📢 **Gửi Công Khai:** Confession Sẽ Ping Thẳng Tên Và Ảnh Đại Diện Thật Của Bạn.\n"
+        "> 🚫 Nghiêm Cấm Nội Dung Đả Kích Cá Nhân, Thô Tục, Xúc Phạm Tôn Giáo, Chính Trị "
+        "Hoặc Vi Phạm Luật Chung Của Server.\n"
+        "> 💫 Hãy Cùng Nhau Lan Tỏa Những Câu Chuyện Ấm Áp Và Năng Lượng Tích Cực Nhé!"
     )
 
-    footer = discord.ui.TextDisplay("-# 👇 Nhấn Nút Tương Ứng Bên Dưới Để Viết Confession:")
+    footer = discord.ui.TextDisplay("-# 👇 Nhấn Nút Tương Ứng Bên Dưới Để Viết Confession")
 
     buttons = discord.ui.ActionRow(
         ConfessionAnonButton(),
@@ -626,6 +624,10 @@ def build_confession_panel_container(guild_name: str) -> discord.ui.Container:
     )
 
 
+# Ảnh Placeholder Màu Đen Tuyền — Dùng Làm Thumbnail Khi Gửi Confession Ẩn Danh
+ANONYMOUS_THUMBNAIL_URL = "https://placehold.co/128x128/000000/000000.png"
+
+
 def build_confession_post_view(
     guild_name: str,
     number: int,
@@ -635,54 +637,47 @@ def build_confession_post_view(
     nickname: str | None = None,
     target_name: str | None = None,
 ) -> discord.ui.LayoutView:
-    """Layout (Components V2) Cho 1 Confession — sử dụng discord-components-v2."""
-    
-    # Tiêu đề chính
-    title = discord.ui.TextDisplay(f"## 💚 **{guild_name}** • 𝐂𝐎𝐍𝐅𝐄𝐒𝐒𝐈𝐎𝐍 💚")
-    
-    # Số confession
-    confession_number = discord.ui.TextDisplay(f"**📝 #Confession {number}**")
-    
-    # Đường kẻ
-    separator = discord.ui.Separator()
-    
-    # Nội dung tâm sự - format với dấu > (giữ nguyên)
-    content_display = discord.ui.TextDisplay(f"> **💬 Tâm Sự:**\n> {content}")
-    
-    # Người gửi - Bỏ dấu >, viết hoa tất cả chữ cái đầu
+    """Layout (Components V2) Cho 1 Confession — Kèm Thumbnail (Avatar Hoặc Ảnh Đen Nếu Ẩn Danh)."""
+
+    # Người Gửi + Thumbnail
+    # - Ẩn Danh: Hiện Biệt Danh Nếu Đã Đặt (Không Lộ Danh Tính Thật), Mặc Định "Ẩn Danh".
+    # - Công Khai: Luôn Ping Thật + Kèm Username Trong Ngoặc, Không Dùng Biệt Danh.
     if anonymous:
-        sender = discord.ui.TextDisplay("👤 **Người Gửi:** 🕵️ Ẩn Danh")
+        anon_label = nickname or "Ẩn Danh"
+        sender_text = discord.ui.TextDisplay(f"🕵️ **Người Gửi:** {anon_label}")
+        thumbnail = discord.ui.Thumbnail(media=ANONYMOUS_THUMBNAIL_URL)
     else:
-        display_name = nickname or member.display_name
-        sender = discord.ui.TextDisplay(f"👤 **Người Gửi:** {display_name}")
-    
-    # Gửi đến / Ký tên - Bỏ dấu >, viết hoa tất cả chữ cái đầu
+        sender_text = discord.ui.TextDisplay(f"👤 **Người Gửi:** {member.mention} (`{member.name}`)")
+        thumbnail = discord.ui.Thumbnail(media=member.display_avatar.url)
+
+    header_section = discord.ui.Section(
+        discord.ui.TextDisplay(f"## 💌 Góc Tâm Sự — **{guild_name}**"),
+        discord.ui.TextDisplay(f"**#Confession {number}**"),
+        accessory=thumbnail,
+    )
+
+    content_display = discord.ui.TextDisplay(f"💌 **Tâm Sự**\n> 💬 {content}")
+
     if target_name:
-        target = discord.ui.TextDisplay(f"💌 **Gửi Đến / Ký Tên:** {target_name}")
+        target = discord.ui.TextDisplay(f"💝 **Gửi Đến / Ký Tên:** {target_name}")
     else:
-        target = discord.ui.TextDisplay("💌 **Gửi Đến / Ký Tên:** Không Có")
-    
-    # Thời gian - Bỏ dấu >, viết hoa tất cả chữ cái đầu
+        target = discord.ui.TextDisplay("💝 **Gửi Đến / Ký Tên:** Không Có")
+
     now = discord.utils.utcnow()
     time_display = discord.ui.TextDisplay(f"🕒 **Thời Gian:** {now.strftime('%H:%M:%S %d/%m/%Y')}")
-    
-    # Footer
-    footer = discord.ui.TextDisplay("-# 💚 Hãy tôn trọng, chia sẻ và lan tỏa yêu thương cùng nhau nhé!")
-    
-    # Nút trả lời
+
+    footer = discord.ui.TextDisplay("-# 💚 Hãy Tôn Trọng, Chia Sẻ Và Lan Tỏa Yêu Thương Cùng Nhau Nhé!")
+
     reply_button = discord.ui.ActionRow(ConfessionReplyButton(number))
-    
-    # Tạo Container với tất cả components
+
     view = discord.ui.LayoutView(timeout=None)
     view.add_item(
         discord.ui.Container(
-            title,
+            header_section,
             discord.ui.Separator(spacing=discord.SeparatorSpacing.large),
-            confession_number,
-            separator,
             content_display,
             discord.ui.Separator(),
-            sender,
+            sender_text,
             target,
             time_display,
             discord.ui.Separator(),
@@ -699,13 +694,13 @@ class ConfessionReplyModal(discord.ui.Modal):
     """Form Trả Lời Ẩn Danh Cho Confession."""
 
     def __init__(self, confession_number: int):
-        super().__init__(title=f"💚 Trả lời confession #{confession_number}")
+        super().__init__(title=f"💚 Trả Lời Confession #{confession_number}")
         self.confession_number = confession_number
         
         self.reply_input = discord.ui.TextInput(
-            label="💬 Nội dung trả lời",
+            label="💬 Nội Dung Trả Lời",
             style=discord.TextStyle.paragraph,
-            placeholder="Nhập câu trả lời của bạn...",
+            placeholder="Nhập Câu Trả Lời Của Bạn...",
             max_length=1500,
             required=True,
             min_length=10,
@@ -721,9 +716,7 @@ class ConfessionReplyModal(discord.ui.Modal):
         
         if not thread_id:
             await interaction.response.send_message(
-                view=build_simple_info_view(
-                    "❌", "Không tìm thấy thread cho confession này.", discord.Color.green()
-                ),
+                view=build_setting_error_view("Không Tìm Thấy Thread Cho Confession Này."),
                 ephemeral=True,
             )
             return
@@ -732,19 +725,17 @@ class ConfessionReplyModal(discord.ui.Modal):
         thread = guild.get_thread(thread_id)
         if not thread:
             await interaction.response.send_message(
-                view=build_simple_info_view(
-                    "❌", "Thread đã bị xóa hoặc không tồn tại.", discord.Color.green()
-                ),
+                view=build_setting_error_view("Thread Đã Bị Xóa Hoặc Không Tồn Tại."),
                 ephemeral=True,
             )
             return
         
         # Gửi reply ẩn danh vào thread
-        await thread.send(f"> **🕵️ Ẩn danh:**\n> {self.reply_input.value}")
+        await thread.send(f"> **🕵️ Ẩn Danh:**\n> {self.reply_input.value}")
         
         await interaction.response.send_message(
             view=build_simple_info_view(
-                "✅", f"Đã gửi câu trả lời ẩn danh cho confession #{self.confession_number}! 💌", discord.Color.green()
+                "✅", f"Đã Gửi Câu Trả Lời Ẩn Danh Cho Confession #{self.confession_number}! 💌", discord.Color.green()
             ),
             ephemeral=True,
         )
@@ -755,7 +746,7 @@ class ConfessionReplyButton(discord.ui.Button):
 
     def __init__(self, confession_number: int):
         super().__init__(
-            label="💬 Trả lời ẩn danh",
+            label="💬 Trả Lời Ẩn Danh",
             style=discord.ButtonStyle.green,
             custom_id=f"confession_reply_{confession_number}",
         )
@@ -775,9 +766,9 @@ class ConfessionModal(discord.ui.Modal):
         
         # Nội dung confession
         self.content_input = discord.ui.TextInput(
-            label="📝 Nội dung tâm sự",
+            label="📝 Nội Dung Tâm Sự",
             style=discord.TextStyle.paragraph,
-            placeholder="Nhập những câu chuyện, lời nhắn nhủ thầm kín của bạn ở đây...",
+            placeholder="Nhập Những Câu Chuyện, Lời Nhắn Nhủ Thầm Kín Của Bạn Ở Đây...",
             max_length=1500,
             required=True,
             min_length=10,
@@ -786,23 +777,25 @@ class ConfessionModal(discord.ui.Modal):
         
         # Tên người nhận hoặc biệt danh ký tên
         self.target_input = discord.ui.TextInput(
-            label="💌 Gửi đến ai hoặc Biệt danh ký tên (tùy chọn)",
+            label="💌 Gửi Đến Ai Hoặc Biệt Danh Ký Tên (Tùy Chọn)",
             style=discord.TextStyle.short,
-            placeholder="Ví dụ: Crush 12A3, Bé Thỏ, hoặc bỏ trống để ẩn danh hoàn toàn",
+            placeholder="Ví Dụ: Crush 12A3, Bé Thỏ, Hoặc Bỏ Trống Để Ẩn Danh Hoàn Toàn",
             max_length=100,
             required=False,
         )
         self.add_item(self.target_input)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Defer Ngay Lập Tức — Tránh Timeout 3 Giây Của Discord Vì Phía Dưới
+        # Có Nhiều Thao Tác Nặng (Gửi Tin, Tạo Thread, Gửi Lại Panel...).
+        await interaction.response.defer(ephemeral=True)
+
         data = load_data()
         guild = interaction.guild
         channel_id = get_confession_channel_id(data, guild.id)
         channel = guild.get_channel(channel_id) if channel_id else None
 
         if not channel:
-            # Defer response trước để tránh timeout
-            await interaction.response.defer(ephemeral=True)
             await interaction.followup.send(
                 view=build_simple_info_view(
                     "❌", "Kênh Confession Chưa Được Thiết Lập. Vui Lòng Báo Admin.", discord.Color.green()
@@ -838,12 +831,15 @@ class ConfessionModal(discord.ui.Modal):
                     pass
                 del confession_panel_messages[guild.id]
             
-            # Gửi confession với view
-            confession_msg = await channel.send(view=view)
+            # Gửi Confession Với View (Cho Phép Ping User Thật Khi Công Khai, Không Ping Role/Everyone)
+            confession_msg = await channel.send(
+                view=view,
+                allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
+            )
             
             # Tạo thread cho confession
             thread = await confession_msg.create_thread(
-                name=f"💬 Trả lời confession #{number}",
+                name=f"💬 Trả Lời Confession #{number}",
                 auto_archive_duration=60,
             )
             
@@ -851,8 +847,8 @@ class ConfessionModal(discord.ui.Modal):
             set_confession_thread(data, guild.id, number, thread.id)
             
             # Gửi tin nhắn hướng dẫn trong thread
-            await thread.send("**💚 Chào mừng bạn đến với thread trả lời confession!**\n"
-                              "Hãy chia sẻ cảm nghĩ của bạn về confession này một cách văn minh và tôn trọng nhé!")
+            await thread.send("**💚 Chào Mừng Bạn Đến Với Thread Trả Lời Confession!**\n"
+                              "Hãy Chia Sẻ Cảm Nghĩ Của Bạn Về Confession Này Một Cách Văn Minh Và Tôn Trọng Nhé!")
             
             # Gửi lại panel mới
             panel_container = build_confession_panel_container(guild.name)
@@ -862,48 +858,37 @@ class ConfessionModal(discord.ui.Modal):
             confession_panel_messages[guild.id] = panel_msg.id
             
         except discord.HTTPException as e:
-            # Defer response nếu chưa có
-            if not interaction.response.is_done():
-                await interaction.response.defer(ephemeral=True)
             await interaction.followup.send(
-                view=build_simple_info_view("❌", f"Gửi Confession Thất Bại: {e}", discord.Color.green()),
+                view=build_setting_error_view(f"Gửi Confession Thất Bại: {e}"),
                 ephemeral=True,
             )
             save_data(data)
             return
 
         save_data(data)
-        
-        # Gửi response thành công
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    view=build_simple_info_view(
-                        "✅", f"Đã Gửi Confession #{number}! Cảm Ơn Bạn Đã Chia Sẻ 💌", discord.Color.green()
-                    ),
-                    ephemeral=True,
-                )
-            else:
-                await interaction.followup.send(
-                    view=build_simple_info_view(
-                        "✅", f"Đã Gửi Confession #{number}! Cảm Ơn Bạn Đã Chia Sẻ 💌", discord.Color.green()
-                    ),
-                    ephemeral=True,
-                )
-        except discord.HTTPException:
-            # Nếu không thể gửi response, vẫn lưu confession
-            pass
+
+        # Gửi Response Thành Công (Interaction Đã Được Defer Ở Trên)
+        await interaction.followup.send(
+            view=build_simple_info_view(
+                "✅", f"Đã Gửi Confession #{number}! Cảm Ơn Bạn Đã Chia Sẻ 💌", discord.Color.green()
+            ),
+            ephemeral=True,
+        )
 
 
-class ConfessionNicknameModal(discord.ui.Modal, title="💚 Thiết Lập Biệt Danh"):
-    """Form Đặt Biệt Danh Hiển Thị Khi Gửi Confession Công Khai."""
+class ConfessionNicknameModal(discord.ui.Modal):
+    """Form Đặt Biệt Danh Hiển Thị Khi Gửi Confession Ẩn Danh."""
 
-    nickname_input = discord.ui.TextInput(
-        label="🏷️ Biệt danh (để trống để xóa)",
-        placeholder="Ví dụ: Bé Thỏ, Crush 12A3, Mèo Ú...",
-        max_length=32,
-        required=False,
-    )
+    def __init__(self, current_nickname: str | None = None):
+        super().__init__(title="💚 Thiết Lập Biệt Danh")
+        self.nickname_input = discord.ui.TextInput(
+            label="🏷️ Biệt Danh (Để Trống Để Xóa)",
+            placeholder="Ví Dụ: Bé Thỏ, Crush 12A3, Mèo Ú...",
+            max_length=32,
+            required=False,
+            default=current_nickname,
+        )
+        self.add_item(self.nickname_input)
 
     async def on_submit(self, interaction: discord.Interaction):
         data = load_data()
@@ -956,7 +941,9 @@ class ConfessionNicknameButton(discord.ui.Button):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(ConfessionNicknameModal())
+        data = load_data()
+        current_nickname = get_confession_nickname(data, interaction.guild_id, interaction.user.id)
+        await interaction.response.send_modal(ConfessionNicknameModal(current_nickname=current_nickname))
 
 
 # ── Sự Kiện ───────────────────────────────────────────────────────────────
