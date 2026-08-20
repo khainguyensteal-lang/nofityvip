@@ -109,6 +109,7 @@ def _default_data():
         "confession_nickname": {},  # guild_id -> { user_id -> biệt danh }
         "confession_count": {},     # guild_id -> số thứ tự confession đã gửi
         "confession_threads": {},   # guild_id -> { confession_number -> thread_id }
+        "visual_channel": {},       # guild_id -> channel_id (Kênh Chỉ Nhận Ảnh/Video)
     }
 
 
@@ -177,6 +178,11 @@ def get_confession_thread(data, guild_id, confession_number):
 def set_confession_thread(data, guild_id, confession_number, thread_id):
     g = data["confession_threads"].setdefault(str(guild_id), {})
     g[str(confession_number)] = thread_id
+
+
+def get_visual_channel_id(data, guild_id):
+    saved = data["visual_channel"].get(str(guild_id))
+    return int(saved) if saved else None
 
 
 def load_data():
@@ -552,12 +558,14 @@ def build_settings_view(guild: discord.Guild, data: dict) -> discord.ui.LayoutVi
         f"> 📖 **Rules:** {fmt(get_rules_channel_id(data, guild.id))}\n"
         f"> 🎭 **Roles:** {fmt(get_roles_channel_id(data, guild.id))}\n"
         f"> 📣 **Welcome Role Ping:** {fmt_role(get_welcome_role_id(data, guild.id))}\n"
-        f"> ❤️ **Confession:** {fmt(get_confession_channel_id(data, guild.id))}"
+        f"> ❤️ **Confession:** {fmt(get_confession_channel_id(data, guild.id))}\n"
+        f"> 📸 **Visual-Check (Ảnh/Video):** {fmt(get_visual_channel_id(data, guild.id))}"
     )
 
     footer = discord.ui.TextDisplay(
         "-# Dùng `/set-welcome-channel` (Kèm Tùy Chọn Rules/Roles/Giới Thiệu/Role), "
-        "`/set-leave-channel`, `/set-invites-channel`, `/set-confession-channel` Để Thay Đổi."
+        "`/set-leave-channel`, `/set-invites-channel`, `/set-confession-channel`, "
+        "`/set-visual-channel` Để Thay Đổi."
     )
 
     view = discord.ui.LayoutView(timeout=None)
@@ -626,6 +634,37 @@ def build_confession_panel_container(guild_name: str) -> discord.ui.Container:
 
 # Ảnh Placeholder Màu Đen Tuyền — Dùng Làm Thumbnail Khi Gửi Confession Ẩn Danh
 ANONYMOUS_THUMBNAIL_URL = "https://placehold.co/128x128/000000/000000.png"
+
+
+def build_visual_panel_container(guild_name: str) -> discord.ui.Container:
+    """Nội Dung Panel Kênh Chia Sẻ Ảnh & Video."""
+    header = discord.ui.TextDisplay(f"## 📸 Kênh Chia Sẻ Ảnh & Video")
+
+    welcome = discord.ui.TextDisplay(
+        "🎨 **Chào Mừng Đến Kênh Chia Sẻ Ảnh & Video!**\n\n"
+        "🎬 Đây Là Nơi Để Mọi Người Chia Sẻ Những Khoảnh Khắc Đẹp, Video Thú Vị!"
+    )
+
+    rules = discord.ui.TextDisplay(
+        "> ⚠️ **Quy Tắc:**\n"
+        "> 📸 Chỉ Gửi Ảnh Hoặc Video Vào Kênh Này.\n"
+        "> 💬 Vui Lòng Bình Luận Trong Thread Của Ảnh/Video.\n"
+        "> 🧵 Thread Sẽ Được Tạo Tự Động Khi Bạn Gửi Ảnh/Video.\n"
+        "> ❌ Không Gửi Tin Nhắn Văn Bản Đơn Thuần (Không Có Ảnh/Video)."
+    )
+
+    footer = discord.ui.TextDisplay("-# ❤️ Hãy Tương Tác & Bình Luận Trong Thread Nhé!")
+
+    return discord.ui.Container(
+        header,
+        discord.ui.Separator(spacing=discord.SeparatorSpacing.large),
+        welcome,
+        discord.ui.Separator(),
+        rules,
+        discord.ui.Separator(),
+        footer,
+        accent_color=discord.Color.purple(),
+    )
 
 
 def build_confession_post_view(
@@ -1097,6 +1136,65 @@ async def on_member_remove(member: discord.Member):
             await channel.send(view=build_leave_view(member))
 
 
+IMAGE_VIDEO_EXTENSIONS = (
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff",  # Ảnh
+    ".mp4", ".mov", ".webm", ".avi", ".mkv", ".m4v",            # Video
+)
+
+
+def message_has_media(message: discord.Message) -> bool:
+    """Kiểm Tra Tin Nhắn Có Đính Kèm Ảnh Hoặc Video Hay Không."""
+    for att in message.attachments:
+        if att.content_type and (att.content_type.startswith("image/") or att.content_type.startswith("video/")):
+            return True
+        if att.filename.lower().endswith(IMAGE_VIDEO_EXTENSIONS):
+            return True
+    # Cho Phép Cả Link Ảnh/Video Có Preview (Embed Loại image/video/gifv)
+    for embed in message.embeds:
+        if embed.type in ("image", "video", "gifv"):
+            return True
+    return False
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    # Luôn Cho Bot Xử Lý Lệnh Văn Bản (Vd: !sync) Trước Tiên
+    if message.author.bot:
+        return
+
+    if message.guild:
+        data = load_data()
+        visual_channel_id = get_visual_channel_id(data, message.guild.id)
+
+        if visual_channel_id and message.channel.id == visual_channel_id:
+            if not message_has_media(message):
+                try:
+                    await message.delete()
+                except (discord.Forbidden, discord.HTTPException):
+                    pass
+                try:
+                    await message.channel.send(
+                        f"⚠️ {message.author.mention} Kênh Này Chỉ Nhận Ảnh Hoặc Video — "
+                        "Tin Nhắn Văn Bản Đơn Thuần Đã Bị Xóa Tự Động.",
+                        delete_after=6,
+                        allowed_mentions=discord.AllowedMentions(users=True, roles=False, everyone=False),
+                    )
+                except discord.HTTPException:
+                    pass
+                return
+
+            # Có Ảnh/Video Hợp Lệ -> Tự Động Tạo Thread Để Bình Luận
+            try:
+                await message.create_thread(
+                    name=f"💬 Bình Luận — {message.author.display_name}"[:100],
+                    auto_archive_duration=1440,
+                )
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+
+    await bot.process_commands(message)
+
+
 # ── Lệnh Slash ────────────────────────────────────────────────────────────
 @bot.tree.command(name="invites", description="Xem Số Lượt Mời Của Bạn Hoặc Người Khác")
 @app_commands.describe(member="Thành Viên Muốn Xem (Bỏ Trống = Xem Của Bạn)")
@@ -1311,6 +1409,38 @@ async def set_confession_channel_cmd(interaction: discord.Interaction, channel: 
 
 @set_confession_channel_cmd.error
 async def set_confession_channel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if await handle_owner_check_error(interaction, error):
+        return
+    await interaction.response.send_message(view=build_setting_error_view(str(error)), ephemeral=True)
+
+
+@bot.tree.command(name="set-visual-channel", description="[Admin] Đặt Kênh Chỉ Nhận Ảnh/Video (Tự Xóa Tin Nhắn Văn Bản, Tự Tạo Thread)")
+@app_commands.describe(channel="Kênh Chỉ Cho Phép Gửi Ảnh Hoặc Video")
+@is_owner()
+@app_commands.default_permissions(administrator=True)
+async def set_visual_channel_cmd(interaction: discord.Interaction, channel: discord.TextChannel):
+    data = load_data()
+    data["visual_channel"][str(interaction.guild_id)] = str(channel.id)
+    save_data(data)
+
+    try:
+        panel_container = build_visual_panel_container(interaction.guild.name)
+        panel_view = discord.ui.LayoutView(timeout=None)
+        panel_view.add_item(panel_container)
+        await channel.send(view=panel_view)
+    except discord.HTTPException as e:
+        await interaction.response.send_message(
+            view=build_setting_error_view(f"Đặt Kênh Thành Công Nhưng Gửi Panel Thất Bại: {e}"), ephemeral=True
+        )
+        return
+
+    await interaction.response.send_message(
+        view=build_setting_confirm_view("📸", "Visual-Check", channel), ephemeral=True
+    )
+
+
+@set_visual_channel_cmd.error
+async def set_visual_channel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if await handle_owner_check_error(interaction, error):
         return
     await interaction.response.send_message(view=build_setting_error_view(str(error)), ephemeral=True)
