@@ -110,6 +110,7 @@ def _default_data():
         "confession_count": {},     # guild_id -> số thứ tự confession đã gửi
         "confession_threads": {},   # guild_id -> { confession_number -> thread_id }
         "visual_channel": {},       # guild_id -> channel_id (Kênh Chỉ Nhận Ảnh/Video)
+        "pickrole_channel": {},     # guild_id -> channel_id (Kênh Đăng Panel Pick Role)
     }
 
 
@@ -182,6 +183,11 @@ def set_confession_thread(data, guild_id, confession_number, thread_id):
 
 def get_visual_channel_id(data, guild_id):
     saved = data["visual_channel"].get(str(guild_id))
+    return int(saved) if saved else None
+
+
+def get_pickrole_channel_id(data, guild_id):
+    saved = data["pickrole_channel"].get(str(guild_id))
     return int(saved) if saved else None
 
 
@@ -559,13 +565,14 @@ def build_settings_view(guild: discord.Guild, data: dict) -> discord.ui.LayoutVi
         f"> 🎭 **Roles:** {fmt(get_roles_channel_id(data, guild.id))}\n"
         f"> 📣 **Welcome Role Ping:** {fmt_role(get_welcome_role_id(data, guild.id))}\n"
         f"> ❤️ **Confession:** {fmt(get_confession_channel_id(data, guild.id))}\n"
-        f"> 📸 **Visual-Check (Ảnh/Video):** {fmt(get_visual_channel_id(data, guild.id))}"
+        f"> 📸 **Visual-Check (Ảnh/Video):** {fmt(get_visual_channel_id(data, guild.id))}\n"
+        f"> 🎭 **Pick Role:** {fmt(get_pickrole_channel_id(data, guild.id))}"
     )
 
     footer = discord.ui.TextDisplay(
         "-# Dùng `/set-welcome-channel` (Kèm Tùy Chọn Rules/Roles/Giới Thiệu/Role), "
         "`/set-leave-channel`, `/set-invites-channel`, `/set-confession-channel`, "
-        "`/set-visual-channel` Để Thay Đổi."
+        "`/set-visual-channel`, `/set-pickrole-channel` Để Thay Đổi."
     )
 
     view = discord.ui.LayoutView(timeout=None)
@@ -667,6 +674,101 @@ def build_visual_panel_container(guild_name: str) -> discord.ui.Container:
     )
 
 
+# ── Pick Role — Chọn Role Theo Nhóm Bằng Dropdown (Chỉnh Sửa Trực Tiếp Ở Đây) ─
+PICKROLE_BANNER_URL = "https://i.imgur.com/8xQ2sJ1.png"  # Đổi Link Banner "PICK ROLE" Nếu Muốn
+
+# ── Pick Role — Chọn Role Theo Nhóm Bằng Nút Bấm (Chỉnh Sửa Trực Tiếp Ở Đây) ─
+PICKROLE_BANNER_URL = "https://i.imgur.com/8xQ2sJ1.png"  # Đổi Link Banner "PICK ROLE" Nếu Muốn
+
+# LƯU Ý: "role_name" Phải Trùng Chính Xác (Kể Cả Hoa/Thường) Với Tên Role Bạn Đã
+# Tạo Sẵn Trong Server. Bot Sẽ Tìm Theo Tên Này Để Gán/Gỡ, KHÔNG Tự Tạo Role Mới.
+PICKROLE_GROUPS = [
+    {
+        "label": "Giới Tính Của Bạn Là Gì?",
+        "multi_select": True,
+        "options": [
+            {"label": "Cyber Boy", "emoji": "🤖", "role_name": "Cyber Boy"},
+            {"label": "Cyber Girl", "emoji": "🎀", "role_name": "Cyber Girl"},
+            {"label": "Cyber Soul", "emoji": "🌈", "role_name": "Cyber Soul"},
+        ],
+    },
+    {
+        "label": "Game Bạn Thường Hay Chơi Là Gì?",
+        "multi_select": True,
+        "options": [
+            {"label": "Free Fire", "emoji": "🔥", "role_name": "Free Fire"},
+            {"label": "Liên Quân", "emoji": "⚔️", "role_name": "Liên Quân"},
+            {"label": "Valorant", "emoji": "🔫", "role_name": "Valorant"},
+            {"label": "PUBG", "emoji": "🪖", "role_name": "PUBG"},
+            {"label": "Roblox", "emoji": "🧱", "role_name": "Roblox"},
+            {"label": "TFT/LOL", "emoji": "🐉", "role_name": "TFT/LOL"},
+            {"label": "Game Khác", "emoji": "🎲", "role_name": "Game Khác"},
+        ],
+    },
+    {
+        "label": "Bạn Có Người Yêu Chưa?",
+        "multi_select": False,
+        "options": [
+            {"label": "Chưa Có", "emoji": "🐸", "role_name": "Chưa Có"},
+            {"label": "Có Rùiii", "emoji": "🐢", "role_name": "Có Rùiii"},
+            {"label": "Đang Kiếm Nghệ", "emoji": "🍀", "role_name": "Đang Kiếm Nghệ"},
+        ],
+    },
+    {
+        "label": "Bạn Có Muốn Nhận Thông Báo Từ Server Này Không?",
+        "multi_select": True,
+        "options": [
+            {"label": "Ping Event", "emoji": "🎉", "role_name": "Ping Event"},
+            {"label": "Ping Giveaways", "emoji": "🎁", "role_name": "Ping Giveaways"},
+            {"label": "Không Ping", "emoji": "🔕", "role_name": "Không Ping"},
+        ],
+    },
+]
+
+
+def build_pickrole_panel_container(guild: discord.Guild) -> discord.ui.Container:
+    """Nội Dung Panel Pick Role — Banner + Mô Tả + Nút Bấm Chọn Role Theo Nhóm."""
+    items: list = []
+
+    if PICKROLE_BANNER_URL:
+        items.append(discord.ui.MediaGallery(discord.MediaGalleryItem(media=PICKROLE_BANNER_URL)))
+
+    items.append(
+        discord.ui.TextDisplay(
+            "Đây Là Nơi Để Bạn Tự Do Chọn Những Role Thể Hiện Cá Tính, Sở Thích Và Cả "
+            "Vùng Miền Của Mình.\nChọn Xong Rồi Thì Mọi Người Sẽ Dễ Dàng Kết Nối, Làm "
+            "Quen Với Bạn Hơn Đó! ⭐"
+        )
+    )
+    items.append(discord.ui.Separator())
+
+    for i, group in enumerate(PICKROLE_GROUPS, start=1):
+        items.append(discord.ui.TextDisplay(f"**{i}️⃣ {group['label']}**"))
+
+        buttons = [
+            PickRoleButton(
+                group_index=i,
+                option_label=opt["label"],
+                role_name=opt["role_name"],
+                emoji=opt["emoji"],
+            )
+            for opt in group["options"]
+        ]
+        # Discord Giới Hạn Tối Đa 5 Nút / ActionRow -> Tự Chia Thành Nhiều Hàng
+        for row_start in range(0, len(buttons), 5):
+            items.append(discord.ui.ActionRow(*buttons[row_start:row_start + 5]))
+
+        if i < len(PICKROLE_GROUPS):
+            items.append(discord.ui.Separator())
+
+    items.append(discord.ui.Separator())
+    items.append(
+        discord.ui.TextDisplay("-# 👉 Chỉ Cần Bấm Vào Nút Bên Trên Là Có Role Ngay. Thử Pick Vài Cái Cho Vui Nhé! ⭐")
+    )
+
+    return discord.ui.Container(*items, accent_color=discord.Color.from_str("#f7b7c8"))
+
+
 def build_confession_post_view(
     guild_name: str,
     number: int,
@@ -727,6 +829,66 @@ def build_confession_post_view(
         )
     )
     return view
+
+
+class PickRoleButton(discord.ui.Button):
+    """Nút Bấm Gán/Gỡ 1 Role Có Sẵn Trong Server (Tìm Theo Tên, Không Tự Tạo Role)."""
+
+    def __init__(self, group_index: int, option_label: str, role_name: str, emoji: str):
+        super().__init__(
+            label=option_label,
+            emoji=emoji,
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"pickrole_btn_{group_index}_{option_label}",
+        )
+        self.group_index = group_index
+        self.role_name = role_name
+        self.option_label = option_label
+
+    async def callback(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        member = interaction.user
+
+        role = discord.utils.get(guild.roles, name=self.role_name)
+        if role is None:
+            await interaction.response.send_message(
+                view=build_setting_error_view(
+                    f"Không Tìm Thấy Role **{self.role_name}** Trong Server. "
+                    "Vui Lòng Tạo Role Này Trước (Tên Phải Trùng Chính Xác)."
+                ),
+                ephemeral=True,
+            )
+            return
+
+        group = PICKROLE_GROUPS[self.group_index - 1]
+
+        try:
+            if role in member.roles:
+                await member.remove_roles(role, reason="Bỏ Chọn Pick Role")
+                message = f"➖ Đã Gỡ Role **{self.option_label}**."
+            else:
+                # Nhóm Chỉ-Chọn-1 (multi_select=False) -> Gỡ Các Role Khác Cùng Nhóm Trước
+                if not group.get("multi_select", True):
+                    for opt in group["options"]:
+                        if opt["role_name"] == self.role_name:
+                            continue
+                        other_role = discord.utils.get(guild.roles, name=opt["role_name"])
+                        if other_role and other_role in member.roles:
+                            await member.remove_roles(other_role, reason="Đổi Lựa Chọn Pick Role")
+
+                await member.add_roles(role, reason="Pick Role")
+                message = f"✅ Đã Thêm Role **{self.option_label}**."
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                view=build_setting_error_view("Bot Không Đủ Quyền Để Gán/Gỡ Role Này (Kiểm Tra Vị Trí Role Của Bot)."),
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.send_message(
+            view=build_simple_info_view("🎭", message, discord.Color.green()),
+            ephemeral=True,
+        )
 
 
 class ConfessionReplyModal(discord.ui.Modal):
@@ -998,6 +1160,10 @@ async def on_ready():
         panel_view = discord.ui.LayoutView(timeout=None)
         panel_view.add_item(panel_container)
         bot.add_view(panel_view)
+
+        pickrole_view = discord.ui.LayoutView(timeout=None)
+        pickrole_view.add_item(build_pickrole_panel_container(guild))
+        bot.add_view(pickrole_view)
     
     # Lưu lại tin nhắn panel confession cho các server
     data = load_data()
@@ -1441,6 +1607,99 @@ async def set_visual_channel_cmd(interaction: discord.Interaction, channel: disc
 
 @set_visual_channel_cmd.error
 async def set_visual_channel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if await handle_owner_check_error(interaction, error):
+        return
+    await interaction.response.send_message(view=build_setting_error_view(str(error)), ephemeral=True)
+
+
+@bot.tree.command(name="set-pickrole-channel", description="[Admin] Đặt Kênh Và Đăng Panel Pick Role (Chọn Role Bằng Dropdown)")
+@app_commands.describe(channel="Kênh Sẽ Đăng Panel Pick Role")
+@is_owner()
+@app_commands.default_permissions(administrator=True)
+async def set_pickrole_channel_cmd(interaction: discord.Interaction, channel: discord.TextChannel):
+    data = load_data()
+    data["pickrole_channel"][str(interaction.guild_id)] = str(channel.id)
+    save_data(data)
+
+    try:
+        panel_view = discord.ui.LayoutView(timeout=None)
+        panel_view.add_item(build_pickrole_panel_container(interaction.guild))
+        await channel.send(view=panel_view)
+    except discord.HTTPException as e:
+        await interaction.response.send_message(
+            view=build_setting_error_view(f"Đặt Kênh Thành Công Nhưng Gửi Panel Thất Bại: {e}"), ephemeral=True
+        )
+        return
+
+    await interaction.response.send_message(
+        view=build_setting_confirm_view("🎭", "Pick Role", channel), ephemeral=True
+    )
+
+
+@set_pickrole_channel_cmd.error
+async def set_pickrole_channel_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if await handle_owner_check_error(interaction, error):
+        return
+    await interaction.response.send_message(view=build_setting_error_view(str(error)), ephemeral=True)
+
+
+def _chunk_list(items: list, size: int):
+    """Chia 1 List Thành Nhiều List Con — Dùng Để Tránh Vượt Giới Hạn Ký Tự Của Discord."""
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
+
+
+@bot.tree.command(name="debug-server", description="[Admin] Debug: Liệt Kê Toàn Bộ Role Và Emoji Tùy Chỉnh Của Server (Kèm ID)")
+@is_owner()
+@app_commands.default_permissions(administrator=True)
+async def debug_server_cmd(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    guild = interaction.guild
+
+    # ── Danh Sách Role (Trừ @Everyone) — Sắp Theo Vị Trí Cao -> Thấp Giống Server Settings
+    roles = [r for r in guild.roles if r.name != "@everyone"]
+    roles.sort(key=lambda r: r.position, reverse=True)
+    role_lines = [f"`{r.id}` — {r.mention} (Vị Trí: {r.position})" for r in roles]
+    if not role_lines:
+        role_lines = ["*(Server Chưa Có Role Nào Ngoài @Everyone)*"]
+
+    for i, chunk in enumerate(_chunk_list(role_lines, 35), start=1):
+        total = -(-len(role_lines) // 35)  # Làm Tròn Lên
+        title = f"## 🛡️ Danh Sách Role — {guild.name}" + (f" ({i}/{total})" if total > 1 else "")
+        text = discord.ui.TextDisplay(title + "\n" + "\n".join(chunk))
+        view = discord.ui.LayoutView(timeout=None)
+        view.add_item(discord.ui.Container(text, accent_color=discord.Color.blurple()))
+        await interaction.followup.send(view=view, ephemeral=True)
+
+    # ── Danh Sách Emoji Tùy Chỉnh Của Server (Dùng Cho Nút Bấm Pick Role, Hướng Dẫn Làm Quen...)
+    emojis = list(guild.emojis)
+    emoji_lines = [
+        f"{e} `{e.id}` — Tên: `{e.name}` — Code Dán Vào: `<{'a' if e.animated else ''}:{e.name}:{e.id}>`"
+        for e in emojis
+    ]
+    if not emoji_lines:
+        emoji_lines = ["*(Server Chưa Có Emoji Tùy Chỉnh Nào — Emoji Đang Dùng Là Emoji Unicode Mặc Định)*"]
+
+    for i, chunk in enumerate(_chunk_list(emoji_lines, 35), start=1):
+        total = -(-len(emoji_lines) // 35)
+        title = f"## 😄 Emoji Tùy Chỉnh Của Server — {guild.name}" + (f" ({i}/{total})" if total > 1 else "")
+        text = discord.ui.TextDisplay(title + "\n" + "\n".join(chunk))
+        view = discord.ui.LayoutView(timeout=None)
+        view.add_item(discord.ui.Container(text, accent_color=discord.Color.gold()))
+        await interaction.followup.send(view=view, ephemeral=True)
+
+    footer_text = discord.ui.TextDisplay(
+        "-# 💡 Copy `ID` Role Để Dùng Trong Lệnh Discord. Copy Chuỗi `<:tên:id>` "
+        "Của Emoji Để Dán Vào `PICKROLE_GROUPS` (Thay Cho Emoji Unicode) Nếu Muốn Dùng "
+        "Emoji Tùy Chỉnh Của Server Trong Panel Pick Role Hoặc Hướng Dẫn Làm Quen."
+    )
+    footer_view = discord.ui.LayoutView(timeout=None)
+    footer_view.add_item(discord.ui.Container(footer_text, accent_color=discord.Color.green()))
+    await interaction.followup.send(view=footer_view, ephemeral=True)
+
+
+@debug_server_cmd.error
+async def debug_server_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if await handle_owner_check_error(interaction, error):
         return
     await interaction.response.send_message(view=build_setting_error_view(str(error)), ephemeral=True)
