@@ -680,47 +680,48 @@ PICKROLE_BANNER_URL = "https://i.imgur.com/8xQ2sJ1.png"  # Đổi Link Banner "P
 # ── Pick Role — Chọn Role Theo Nhóm Bằng Nút Bấm (Chỉnh Sửa Trực Tiếp Ở Đây) ─
 PICKROLE_BANNER_URL = "https://i.imgur.com/8xQ2sJ1.png"  # Đổi Link Banner "PICK ROLE" Nếu Muốn
 
-# LƯU Ý: "role_name" Phải Trùng Chính Xác (Kể Cả Hoa/Thường) Với Tên Role Bạn Đã
-# Tạo Sẵn Trong Server. Bot Sẽ Tìm Theo Tên Này Để Gán/Gỡ, KHÔNG Tự Tạo Role Mới.
+# LƯU Ý: "role_id" Là ID Thật Của Role Trong Server (Lấy Từ `/debug-server`).
+# Match Theo ID Chính Xác Tuyệt Đối, Không Sợ Bị Lỗi Nếu Role Có Tên Kiểu Chữ Đặc
+# Biệt (In Đậm Unicode...) Hoặc Sau Này Đổi Tên Role.
 PICKROLE_GROUPS = [
     {
         "label": "Giới Tính Của Bạn Là Gì?",
         "multi_select": True,
         "options": [
-            {"label": "Cyber Boy", "emoji": "🤖", "role_name": "Cyber Boy"},
-            {"label": "Cyber Girl", "emoji": "🎀", "role_name": "Cyber Girl"},
-            {"label": "Cyber Soul", "emoji": "🌈", "role_name": "Cyber Soul"},
+            {"label": "Cyber Boy", "emoji": "<:Boy:1540036279431856179>", "role_id": 1540030835514806374},
+            {"label": "Cyber Girl", "emoji": "<:Girl:1540036350353477764>", "role_id": 1540031029438582814},
+            {"label": "Cyber Soul", "emoji": "<a:Soul:1540036402073305198>", "role_id": 1540031034219958333},
         ],
     },
     {
         "label": "Game Bạn Thường Hay Chơi Là Gì?",
         "multi_select": True,
         "options": [
-            {"label": "Free Fire", "emoji": "🔥", "role_name": "Free Fire"},
-            {"label": "Liên Quân", "emoji": "⚔️", "role_name": "Liên Quân"},
-            {"label": "Valorant", "emoji": "🔫", "role_name": "Valorant"},
-            {"label": "PUBG", "emoji": "🪖", "role_name": "PUBG"},
-            {"label": "Roblox", "emoji": "🧱", "role_name": "Roblox"},
-            {"label": "TFT/LOL", "emoji": "🐉", "role_name": "TFT/LOL"},
-            {"label": "Game Khác", "emoji": "🎲", "role_name": "Game Khác"},
+            {"label": "Free Fire", "emoji": "<:freefire33:1540018282810179805>", "role_id": 1540029017263046816},
+            {"label": "Liên Quân", "emoji": "<:aov98:1540018262278938684>", "role_id": 1540030469675028481},
+            {"label": "Valorant", "emoji": "<:valorant:1540018328054005760>", "role_id": 1540030131966574714},
+            {"label": "PUBG", "emoji": "<:pubg:1540018361641996388>", "role_id": 1540030240515035307},
+            {"label": "Roblox", "emoji": "<:roblox:1540014226431545386>", "role_id": 1540030234412322929},
+            {"label": "TFT/LOL", "emoji": "<:3873_league_of_legends_logo:1540018242062647356>", "role_id": 1540030534028099584},
+            {"label": "Game Khác", "emoji": "<:steam7:1540018308806484070>", "role_id": 1540030354914541709},
         ],
     },
     {
         "label": "Bạn Có Người Yêu Chưa?",
         "multi_select": False,
         "options": [
-            {"label": "Chưa Có", "emoji": "🐸", "role_name": "Chưa Có"},
-            {"label": "Có Rùiii", "emoji": "🐢", "role_name": "Có Rùiii"},
-            {"label": "Đang Kiếm Nghệ", "emoji": "🍀", "role_name": "Đang Kiếm Nghệ"},
+            {"label": "Chưa Có", "emoji": "<a:no:1540040792821866596>", "role_id": 1540039884625158164},
+            {"label": "Có Rùiii", "emoji": "<a:ohhyes:1540040773083332818>", "role_id": 1540039895387602996},
+            {"label": "Đang Kiếm Nghệ", "emoji": "<:frogyes:1540040899520761927>", "role_id": 1540040086383497306},
         ],
     },
     {
         "label": "Bạn Có Muốn Nhận Thông Báo Từ Server Này Không?",
         "multi_select": True,
         "options": [
-            {"label": "Ping Event", "emoji": "🎉", "role_name": "Ping Event"},
-            {"label": "Ping Giveaways", "emoji": "🎁", "role_name": "Ping Giveaways"},
-            {"label": "Không Ping", "emoji": "🔕", "role_name": "Không Ping"},
+            {"label": "Ping Event", "emoji": "<:event:1540039571918684213>", "role_id": 1540040113604665445},
+            {"label": "Ping Giveaways", "emoji": "<a:giveawayntexe59:1540041594298957965>", "role_id": 1540040213068382278},
+            {"label": "Không Ping", "emoji": "<a:pingrage:1540039280515354844>", "role_id": 1540040272728301668},
         ],
     },
 ]
@@ -749,7 +750,7 @@ def build_pickrole_panel_container(guild: discord.Guild) -> discord.ui.Container
             PickRoleButton(
                 group_index=i,
                 option_label=opt["label"],
-                role_name=opt["role_name"],
+                role_id=opt["role_id"],
                 emoji=opt["emoji"],
             )
             for opt in group["options"]
@@ -832,9 +833,9 @@ def build_confession_post_view(
 
 
 class PickRoleButton(discord.ui.Button):
-    """Nút Bấm Gán/Gỡ 1 Role Có Sẵn Trong Server (Tìm Theo Tên, Không Tự Tạo Role)."""
+    """Nút Bấm Gán/Gỡ 1 Role Có Sẵn Trong Server (Tìm Theo ID, Không Tự Tạo Role)."""
 
-    def __init__(self, group_index: int, option_label: str, role_name: str, emoji: str):
+    def __init__(self, group_index: int, option_label: str, role_id: int, emoji: str):
         super().__init__(
             label=option_label,
             emoji=emoji,
@@ -842,19 +843,19 @@ class PickRoleButton(discord.ui.Button):
             custom_id=f"pickrole_btn_{group_index}_{option_label}",
         )
         self.group_index = group_index
-        self.role_name = role_name
+        self.role_id = role_id
         self.option_label = option_label
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
         member = interaction.user
 
-        role = discord.utils.get(guild.roles, name=self.role_name)
+        role = guild.get_role(self.role_id)
         if role is None:
             await interaction.response.send_message(
                 view=build_setting_error_view(
-                    f"Không Tìm Thấy Role **{self.role_name}** Trong Server. "
-                    "Vui Lòng Tạo Role Này Trước (Tên Phải Trùng Chính Xác)."
+                    f"Không Tìm Thấy Role Với ID `{self.role_id}` (**{self.option_label}**) Trong Server. "
+                    "Role Có Thể Đã Bị Xóa."
                 ),
                 ephemeral=True,
             )
@@ -870,9 +871,9 @@ class PickRoleButton(discord.ui.Button):
                 # Nhóm Chỉ-Chọn-1 (multi_select=False) -> Gỡ Các Role Khác Cùng Nhóm Trước
                 if not group.get("multi_select", True):
                     for opt in group["options"]:
-                        if opt["role_name"] == self.role_name:
+                        if opt["role_id"] == self.role_id:
                             continue
-                        other_role = discord.utils.get(guild.roles, name=opt["role_name"])
+                        other_role = guild.get_role(opt["role_id"])
                         if other_role and other_role in member.roles:
                             await member.remove_roles(other_role, reason="Đổi Lựa Chọn Pick Role")
 
